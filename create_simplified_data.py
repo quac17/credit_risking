@@ -1,9 +1,7 @@
 import pandas as pd
 import os
 
-def create_simplified_data():
-    input_path = 'data/application_train.csv'
-    output_path = 'simplified_data.csv'
+def create_simplified_data( input_path, output_path):
 
     # Columns to select based on note.txt Part 1.2
     columns_to_keep = [
@@ -51,4 +49,9 @@ def create_simplified_data():
         print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
-    create_simplified_data()
+    input_train_path = 'data/application_train.csv'
+    input_test_path = 'data/application_test.csv'
+    output_train_path = 'simplified_train_data.csv'
+    output_test_path = 'simplified_test_data.csv'
+    create_simplified_data(input_train_path, output_train_path)
+    create_simplified_data(input_test_path,output_test_path)

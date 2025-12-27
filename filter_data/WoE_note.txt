@@ -1,0 +1,40 @@
+1. Nguyên lý của WoE và IV
+1.1. Weight of Evidence (WoE)
+WoE đo lường mức độ tách biệt giữa khách hàng "Tốt" (Good - trả nợ đúng hạn) và khách hàng "Xấu" (Bad - nợ xấu) trong từng nhóm (bin) của một biến số.
+Công thức:
+WoE_i = ln ( %Good_i / %Bad_i)
+•	Ý nghĩa:
+o	WoE dương: Nhóm đó có tỷ lệ khách hàng "Tốt" cao hơn trung bình (ít rủi ro).
+o	WoE âm: Nhóm đó có tỷ lệ khách hàng "Xấu" cao hơn trung bình (nhiều rủi ro).
+o	WoE bằng 0: Nhóm đó không có khả năng phân loại.
+1.2. Information Value (IV)
+IV là một chỉ số duy nhất tóm tắt sức mạnh dự báo của toàn bộ một biến số. Nó được tính bằng cách tổng hợp chênh lệch tỷ lệ Good/Bad nhân với WoE của tất cả các nhóm.
+Công thức:
+IV = sum{i=1-n} ( % Good_i - %Bad_i ) * WoE_i
+________________________________________
+2. Cách triển khai (Quy trình 4 bước)
+Để tính WoE/IV cho bộ dữ liệu Home Credit, bạn cần làm theo các bước sau:
+Bước 1: Chia nhóm (Binning)
+Các biến số liên tục (như Age, Income) cần được chia thành các khoảng (ví dụ: Age từ 20-30, 30-40...).
+•	Optimal Binning: Chia sao cho mỗi nhóm có ít nhất 5% tổng số quan sát và xu hướng WoE phải đơn điệu (tăng dần hoặc giảm dần) để mô hình ổn định.
+Bước 2: Tính toán tỷ lệ
+Trong mỗi nhóm i, thống kê:
+1.	Số lượng khách hàng Tốt (G_i) và Xấu (B_i).
+2.	Tính %Good_i = G_i / Tổng Good và %Bad_i = B_i / Tổng Bad.
+Bước 3: Tính WoE và IV cho từng biến
+•	Áp dụng công thức trên để tìm WoE cho từng nhóm.
+•	Tính IV cho biến đó.
+Bước 4: Lựa chọn đặc trưng (Feature Selection)
+Dựa vào giá trị IV để quyết định giữ hay bỏ biến:
+•	IV < 0.02: Loại bỏ (Phế phẩm - không có giá trị).
+•	0.02 đến 0.1: Giữ lại nếu thiếu biến (Yếu).
+•	0.1 đến 0.3: Rất tốt (Trung bình).
+•	0.3 đến 0.5: Tuyệt vời (Mạnh).
+•	> 0.5: Cẩn thận (Quá mạnh - có thể là biến "tiên tri" gây rò rỉ dữ liệu).
+
+Bước 5: Tự động hóa rút gọn dữ liệu (Automated Data Simplification)
+Dựa trên kết quả tính toán IV, quy trình tự động hóa sẽ:
+1. Xuất file `iv_values_all.csv` chứa điểm IV của tất cả 120+ trường dữ liệu.
+2. Lọc ra danh sách 20 trường có giá trị IV cao nhất (ảnh hưởng mạnh nhất).
+3. Trích xuất các trường này cùng với `SK_ID_CURR` và `TARGET` vào file `simplified_train_data.csv` và `simplified_test_data.csv` để phục vụ huấn luyện mô hình.
+

@@ -1,0 +1,73 @@
+1. Introduction and Dataset Description (Giới thiệu & Mô tả dữ liệu)
+1.1. Bối cảnh bài toán (Context)
+Home Credit là tập đoàn tài chính hướng tới việc cung cấp các khoản vay cho những người dân không có hoặc có ít lịch sử tín dụng (unbanked population). Các mô hình chấm điểm tín dụng truyền thống thường thất bại với nhóm đối tượng này.
+Mục tiêu của dự án là tận dụng các dữ liệu thay thế (viễn thông, giao dịch...) để dự đoán khả năng trả nợ, giúp mở rộng khả năng tiếp cận tài chính một cách an toàn.
+1.2. Mô tả dữ liệu rút gọn (Simplified Dataset Description)
+Thay vì sử dụng toàn bộ hệ sinh thái dữ liệu phức tạp (gồm 7 bảng như bureau, POS_CASH, installments_payments...), chúng ta tập trung vào bảng chính `application_train.csv`. 
+
+Khác với việc chọn cột cố định, quy trình hiện tại áp dụng phương pháp **Weight of Evidence (WoE)** và **Information Value (IV)** để tự động đánh giá và chọn ra **Top 20 đặc trưng (features) mạnh nhất**.
+
+•	Input (X): Top 20 features có chỉ số IV cao nhất.
+•	Target (y): Cột TARGET (0: Trả được nợ, 1: Khó khăn trả nợ).
+•	ID: Cột SK_ID_CURR.
+
+Các nhóm đặc trưng thường xuyên xuất hiện trong Top 20:
+- Nhóm External Sources: EXT_SOURCE_1, 2, 3.
+- Nhóm Nhân khẩu học & Lao động: DAYS_BIRTH, DAYS_EMPLOYED, CODE_GENDER, NAME_EDUCATION_TYPE.
+- Nhóm Tài chính: AMT_GOODS_PRICE, AMT_CREDIT, AMT_ANNUITY.
+- Nhóm Bất động sản/Tòa nhà: FLOORSMAX_AVG, TOTALAREA_MODE...
+o	Nhóm tài sản: FLAG_OWN_CAR, FLAG_OWN_REALTY.
+________________________________________
+2. Problem Definition (Định nghĩa bài toán)
+2.1. Loại bài toán
+Supervised Binary Classification (Phân loại nhị phân có giám sát).
+2.2. Thách thức đặc thù của Home Credit
+•	Dữ liệu mất cân bằng nghiêm trọng (Imbalanced Class): Trong bộ dữ liệu này, tỷ lệ TARGET = 1 chỉ chiếm khoảng 8%. Nếu mô hình chỉ dự đoán toàn bộ là 0, độ chính xác (Accuracy) vẫn đạt 92% nhưng hoàn toàn vô dụng.
+•	Nhiễu dữ liệu: Dữ liệu thực tế từ người dùng nhập vào thường có sai sót (ví dụ: số ngày làm việc bị âm hoặc lớn bất thường).
+2.3. Chỉ số đánh giá (Metric)
+Với bài toán mất cân bằng và yêu cầu từ Home Credit, chúng ta không dùng Accuracy. Chỉ số chính sẽ là:
+•	ROC-AUC (Area Under the ROC Curve): Đánh giá khả năng phân tách giữa lớp 0 và 1 của mô hình. AUC càng gần 1 càng tốt.
+•	Gini Coefficient: Thường được dùng trong ngành ngân hàng ($Gini = 2 \times AUC - 1$).
+ 
+Images
+________________________________________
+3. Data Pre-processing (Tiền xử lý - Theo hướng đơn giản hóa)
+Đây là bước quan trọng để loại bỏ "rác" và giữ lại thông tin tinh túy.
+3.1. Lọc bỏ dữ liệu ít thông tin (Feature Selection)
+Theo yêu cầu "lược đi data ít thông tin", chúng ta thực hiện:
+•	Loại bỏ cột nhiều Missing Values: Xóa các cột có tỷ lệ thiếu > 50% (ví dụ: thông tin về tòa nhà COMMONAREA_AVG, NONLIVINGAPARTMENTS_AVG... nếu chúng quá thưa thớt).
+•	Loại bỏ cột phương sai thấp (Low Variance): Xóa các cột mà 99% giá trị giống nhau (ví dụ: FLAG_MOBIL - hầu như ai cũng có điện thoại).
+3.2. Xử lý bất thường (Anomalies Handling)
+Trong bộ Home Credit, có một lỗi dữ liệu nổi tiếng cần xử lý:
+•	Cột DAYS_EMPLOYED (số ngày làm việc): Có giá trị 365243 (tương đương 1000 năm). Đây thực chất là mã lỗi hoặc ký hiệu cho "Thất nghiệp/Về hưu".
+•	Giải pháp: Thay thế giá trị 365243 bằng NaN (Not a Number) hoặc một biến category riêng.
+3.3. Xử lý dữ liệu thiếu (Imputation)
+•	Với EXT_SOURCE_x: Đây là biến quan trọng, không nên xóa dòng. Nên điền bằng Median hoặc sử dụng mô hình dự đoán để điền khuyết.
+•	Với các biến số tiền (AMT_...): Điền bằng Median.
+3.4. Feature Engineering (Tạo đặc trưng mới đơn giản)
+Mô hình sẽ học tốt hơn nếu ta tạo ra các tỷ lệ tài chính thay vì con số thô:
+•	Credit_Income_Ratio = AMT_CREDIT / AMT_INCOME_TOTAL (Vay gấp bao nhiêu lần thu nhập).
+•	Annuity_Income_Ratio = AMT_ANNUITY / AMT_INCOME_TOTAL (Áp lực trả nợ hàng năm).
+________________________________________
+4. Exploratory Data Analysis (EDA - Phân tích khám phá)
+Tập trung vào mối quan hệ giữa các biến đã chọn với TARGET.
+4.1. Phân tích biến mục tiêu (Target Distribution)
+•	Vẽ biểu đồ cột thể hiện sự chênh lệch giữa lớp 0 (~92%) và lớp 1 (~8%).
+•	Kết luận: Cần áp dụng kỹ thuật SMOTE (sinh dữ liệu giả lập) hoặc Class Weight (gán trọng số cao cho lớp 1) khi huấn luyện.
+4.2. Phân tích biến định lượng (Continuous Variables)
+•	Tuổi tác (DAYS_BIRTH):
+o	Cần chia cho 365 để ra số tuổi dương.
+o	Insight kỳ vọng: Nhóm khách hàng trẻ tuổi thường có rủi ro vỡ nợ cao hơn nhóm lớn tuổi. (Vẽ biểu đồ KDE Plot phân theo Target).
+•	External Sources (EXT_SOURCE):
+o	Vẽ biểu đồ phân phối của EXT_SOURCE_1, 2, 3 theo TARGET.
+o	Insight kỳ vọng: Điểm External Source càng cao, khả năng vỡ nợ càng thấp (Tương quan âm mạnh).
+
+4.3. Phân tích biến định danh (Categorical Variables)
+•	Trình độ học vấn (NAME_EDUCATION_TYPE):
+o	Vẽ biểu đồ tỷ lệ vỡ nợ theo từng nhóm học vấn.
+o	Insight: Thường nhóm "Lower secondary" (cấp 2) có rủi ro cao hơn nhóm "Academic degree" (Đại học/Sau ĐH).
+•	Giới tính (CODE_GENDER): Kiểm tra xem Nam hay Nữ có tỷ lệ trả nợ tốt hơn. Trong bộ dữ liệu này, thường Nữ giới có tỷ lệ trả nợ tốt hơn Nam giới.
+4.4. Ma trận tương quan (Correlation Matrix)
+•	Tạo Heatmap cho top 10 biến quan trọng nhất.
+•	Kiểm tra xem các biến EXT_SOURCE có tương quan với nhau không (đa cộng tuyến).
+

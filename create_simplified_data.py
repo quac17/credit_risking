@@ -1,57 +1,58 @@
 import pandas as pd
 import os
 
-def create_simplified_data( input_path, output_path):
+def create_simplified_data_by_iv(iv_csv_path, input_path, output_path):
+    print(f"Reading IV values from {iv_csv_path}...")
+    if not os.path.exists(iv_csv_path):
+        print(f"Error: {iv_csv_path} not found. Please run the analysis script first.")
+        return
 
-    # Columns to select based on note.txt Part 1.2
-    columns_to_keep = [
-        # ID
-        'SK_ID_CURR', 
-        # Target
-        'TARGET',
-        # External Sources
-        'EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3',
-        # Financial
-        'AMT_INCOME_TOTAL', 'AMT_CREDIT', 'AMT_ANNUITY',
-        # Demographics
-        'DAYS_BIRTH', 'CODE_GENDER', 'NAME_EDUCATION_TYPE',
-        # Assets
-        'FLAG_OWN_CAR', 'FLAG_OWN_REALTY'
-    ]
+    # Read top 20 features based on IV
+    iv_df = pd.read_csv(iv_csv_path)
+    # Filter out target and ID just in case, though they shouldn't be in the top 20 based on IV logic
+    top_features = iv_df['Feature'].tolist()[:20]
+    
+    # Always include ID and Target for the simplified dataset
+    columns_to_keep = ['SK_ID_CURR', 'TARGET'] + top_features
+    # Deduplicate in case ID or Target were already in top features
+    columns_to_keep = list(dict.fromkeys(columns_to_keep))
 
     print(f"Reading from {input_path}...")
     try:
-        df = pd.read_csv(input_path)
+        # Load data. We use chunking or only necessary columns to save memory if needed,
+        # but for this size, reading the whole thing is usually fine if memory allows.
+        # To be safe, we check if columns exist first.
         
-        # Check if all columns exist
-        missing_cols = [col for col in columns_to_keep if col not in df.columns]
-        if missing_cols:
-            print(f"Warning: The following columns were not found in the input data: {missing_cols}")
-            # Proceed with available columns
-            columns_to_keep = [col for col in columns_to_keep if col in df.columns]
+        # Read only header to check existence
+        header = pd.read_csv(input_path, nrows=0).columns.tolist()
+        final_cols = [col for col in columns_to_keep if col in header]
         
-        print(f"Selecting {len(columns_to_keep)} columns...")
-        simplified_df = df[columns_to_keep]
+        if len(final_cols) < len(columns_to_keep):
+            missing = set(columns_to_keep) - set(final_cols)
+            print(f"Warning: Missing columns in input: {missing}")
+
+        print(f"Selecting {len(final_cols)} columns...")
+        df = pd.read_csv(input_path, usecols=final_cols)
         
         print(f"Saving to {output_path}...")
-        simplified_df.to_csv(output_path, index=False)
-        print("Done!")
-        
-        # Verify
-        print("\nVerification:")
-        print(f"Output shape: {simplified_df.shape}")
-        print("First 5 rows:")
-        print(simplified_df.head())
+        df.to_csv(output_path, index=False)
+        print(f"Done! Created {output_path} with shape {df.shape}")
 
-    except FileNotFoundError:
-        print(f"Error: File not found at {os.path.abspath(input_path)}")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred while processing {input_path}: {e}")
 
 if __name__ == "__main__":
-    input_train_path = 'data/application_train.csv'
-    input_test_path = 'data/application_test.csv'
-    output_train_path = 'simplified_train_data.csv'
-    output_test_path = 'simplified_test_data.csv'
-    create_simplified_data(input_train_path, output_train_path)
-    create_simplified_data(input_test_path,output_test_path)
+    iv_results_path = 'filter_output/iv_values_all.csv'
+    
+    input_train = 'data/application_train.csv'
+    input_test = 'data/application_test.csv'
+    
+    output_train = 'simplified_train_data.csv'
+    output_test = 'simplified_test_data.csv'
+    
+    create_simplified_data_by_iv(iv_results_path, input_train, output_train)
+    
+    # For test data, 'TARGET' won't be present. Let's handle it gracefully.
+    # We can detect presence of TARGET in skip_target logic if needed inside the function, 
+    # but the current usecols=final_cols already handles it via the header check.
+    create_simplified_data_by_iv(iv_results_path, input_test, output_test)

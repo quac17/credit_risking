@@ -1,0 +1,445 @@
+================================================================================
+                    BÁO CÁO ĐỀ TÀI NGHIÊN CỨU
+         DỰ ĐOÁN RỦI RO TÍN DỤNG SỬ DỤNG MÔ HÌNH MÁY HỌC
+              Ứng dụng cho dữ liệu Home Credit
+================================================================================
+
+1. EXECUTIVE SUMMARY (TÓM TẮT DỰ ÁN)
+================================================================================
+
+1.1. Mục tiêu dự án
+Dự án này tập trung vào việc xây dựng mô hình dự đoán rủi ro tín dụng cho 
+Home Credit - một tập đoàn tài chính chuyên cung cấp các khoản vay cho nhóm 
+khách hàng không có hoặc có ít lịch sử tín dụng (unbanked population). Mục 
+tiêu chính là dự đoán xác suất vỡ nợ (Probability of Default) để hỗ trợ ra 
+quyết định phê duyệt khoản vay một cách chính xác và hiệu quả.
+
+1.2. Kết quả chính
+Dự án đã áp dụng phương pháp Weight of Evidence (WoE) và Information Value 
+(IV) để tự động chọn lọc và đánh giá 120+ đặc trưng, từ đó rút gọn xuống 
+Top 20 đặc trưng có khả năng dự đoán cao nhất. Các biến quan trọng nhất 
+ảnh hưởng đến rủi ro tín dụng bao gồm:
+
+- EXT_SOURCE_3 (IV = 0.329): Nguồn dữ liệu bên ngoài số 3 - biến dự đoán 
+  mạnh nhất
+- EXT_SOURCE_2 (IV = 0.306): Nguồn dữ liệu bên ngoài số 2
+- EXT_SOURCE_1 (IV = 0.151): Nguồn dữ liệu bên ngoài số 1
+- DAYS_EMPLOYED (IV = 0.101): Số ngày làm việc
+- AMT_GOODS_PRICE (IV = 0.092): Giá trị hàng hóa
+- DAYS_BIRTH (IV = 0.084): Tuổi khách hàng
+- OCCUPATION_TYPE (IV = 0.083): Loại nghề nghiệp
+- ORGANIZATION_TYPE (IV = 0.073): Loại tổ chức
+
+1.3. Ý nghĩa kinh tế
+Việc triển khai mô hình dự đoán rủi ro tín dụng chính xác sẽ giúp ngân hàng:
+- Giảm tỷ lệ nợ xấu thông qua việc từ chối các khoản vay có rủi ro cao
+- Tối ưu hóa quy trình phê duyệt khoản vay, giảm chi phí vận hành
+- Mở rộng khả năng tiếp cận tài chính cho nhóm khách hàng unbanked một 
+  cách an toàn
+- Tăng lợi nhuận thông qua việc chấp nhận các khoản vay có rủi ro thấp 
+  nhưng bị từ chối bởi các mô hình truyền thống
+
+2. INTRODUCTION & BUSINESS PROBLEM (GIỚI THIỆU & VẤN ĐỀ KINH DOANH)
+================================================================================
+
+2.1. Bối cảnh
+Home Credit là một tập đoàn tài chính quốc tế với sứ mệnh cung cấp các 
+khoản vay cho những người dân không có hoặc có ít lịch sử tín dụng. Đây là 
+một thách thức lớn vì các mô hình chấm điểm tín dụng truyền thống thường 
+dựa vào lịch sử tín dụng ngân hàng, điều mà nhóm khách hàng này không có.
+
+Trong bối cảnh này, Home Credit cần tận dụng các dữ liệu thay thế (alternative 
+data) như thông tin viễn thông, giao dịch, thông tin nhân khẩu học, và các 
+nguồn dữ liệu bên ngoài để đánh giá khả năng trả nợ của khách hàng.
+
+2.2. Mục tiêu bài toán
+Bài toán được định nghĩa là một bài toán phân loại nhị phân có giám sát 
+(Supervised Binary Classification):
+- Mục tiêu: Dự đoán xác suất vỡ nợ (Probability of Default - PD)
+- Biến mục tiêu (TARGET): 
+  * 0: Khách hàng trả nợ thành công
+  * 1: Khách hàng gặp khó khăn trong việc trả nợ
+- Ứng dụng: Hỗ trợ ra quyết định phê duyệt hoặc từ chối khoản vay dựa trên 
+  xác suất vỡ nợ được dự đoán
+
+2.3. Thách thức chính
+- Dữ liệu mất cân bằng nghiêm trọng: Tỷ lệ TARGET = 1 chỉ chiếm khoảng 8% 
+  trong tổng số quan sát. Điều này khiến các chỉ số đánh giá truyền thống 
+  như Accuracy trở nên không phù hợp.
+- Dữ liệu nhiễu: Dữ liệu thực tế từ người dùng nhập vào thường có sai sót 
+  (ví dụ: số ngày làm việc bị âm hoặc lớn bất thường).
+- Đa dạng nguồn dữ liệu: Hệ sinh thái dữ liệu Home Credit bao gồm nhiều 
+  bảng khác nhau (bureau, POS_CASH, installments_payments, previous_application, 
+  v.v.), đòi hỏi kỹ thuật xử lý và kết hợp phức tạp.
+
+2.4. Phạm vi nghiên cứu
+Để đơn giản hóa và tập trung vào các đặc trưng quan trọng nhất, nghiên cứu 
+này tập trung vào bảng chính `application_train.csv` đã được lược bỏ các 
+biến nhiễu thông qua phương pháp phân tích WoE và IV. Thay vì sử dụng toàn 
+bộ 120+ đặc trưng, nghiên cứu sử dụng Top 20 đặc trưng có chỉ số IV cao nhất 
+để xây dựng mô hình.
+
+3. DATA DESCRIPTION & EXPLORATORY DATA ANALYSIS (EDA)
+================================================================================
+
+3.1. Mô tả bộ dữ liệu
+Bộ dữ liệu chính được sử dụng là `application_train.csv`, chứa thông tin 
+về các hồ sơ đăng ký vay của khách hàng. Dữ liệu ban đầu bao gồm hơn 120 
+đặc trưng (features) thuộc các nhóm chính:
+
+- Nhóm External Sources: EXT_SOURCE_1, EXT_SOURCE_2, EXT_SOURCE_3
+- Nhóm Nhân khẩu học: CODE_GENDER, DAYS_BIRTH, NAME_EDUCATION_TYPE, 
+  NAME_FAMILY_STATUS
+- Nhóm Lao động: DAYS_EMPLOYED, OCCUPATION_TYPE, NAME_INCOME_TYPE, 
+  ORGANIZATION_TYPE
+- Nhóm Tài chính: AMT_INCOME_TOTAL, AMT_CREDIT, AMT_ANNUITY, AMT_GOODS_PRICE
+- Nhóm Bất động sản/Tòa nhà: FLOORSMAX_AVG, FLOORSMAX_MEDI, FLOORSMAX_MODE, 
+  TOTALAREA_MODE, LIVINGAREA_AVG, v.v.
+- Nhóm Tài sản: FLAG_OWN_CAR, FLAG_OWN_REALTY
+- Nhóm Địa lý: REGION_RATING_CLIENT, REGION_RATING_CLIENT_W_CITY, 
+  REGION_POPULATION_RELATIVE
+- Nhóm Thông tin liên hệ: DAYS_LAST_PHONE_CHANGE, DAYS_ID_PUBLISH
+
+Sau quá trình phân tích và chọn lọc, bộ dữ liệu được rút gọn xuống Top 20 
+đặc trưng có khả năng dự đoán cao nhất.
+
+3.2. Phân tích đơn biến (Univariate Analysis)
+3.2.1. Phân phối biến mục tiêu (TARGET)
+Phân tích phân phối của biến TARGET cho thấy dữ liệu mất cân bằng nghiêm 
+trọng:
+- Tỷ lệ TARGET = 0 (trả nợ thành công): ~92%
+- Tỷ lệ TARGET = 1 (gặp khó khăn trả nợ): ~8%
+
+Sự mất cân bằng này đòi hỏi phải áp dụng các kỹ thuật xử lý đặc biệt như:
+- Sử dụng Class Weight để điều chỉnh trọng số trong quá trình huấn luyện
+- Áp dụng SMOTE (Synthetic Minority Oversampling Technique) để tạo dữ liệu 
+  giả lập cho lớp thiểu số
+- Sử dụng các chỉ số đánh giá phù hợp với dữ liệu mất cân bằng (AUC, G-Mean, 
+  MCC) thay vì Accuracy
+
+3.2.2. Phân tích các biến số liên tục
+- DAYS_BIRTH (Tuổi): Biến này được chuyển đổi thành tuổi dương bằng cách 
+  chia cho 365. Phân tích cho thấy nhóm khách hàng trẻ tuổi thường có rủi 
+  ro vỡ nợ cao hơn nhóm lớn tuổi.
+- EXT_SOURCE (1, 2, 3): Các biến này thể hiện điểm số từ các nguồn dữ liệu 
+  bên ngoài. Phân tích cho thấy mối tương quan âm mạnh: điểm EXT_SOURCE càng 
+  cao, khả năng vỡ nợ càng thấp.
+- AMT_GOODS_PRICE, AMT_CREDIT: Các biến tài chính này có mối quan hệ phức 
+  tạp với rủi ro. Khách hàng có khoản vay quá lớn so với thu nhập thường có 
+  rủi ro cao hơn.
+
+3.2.3. Phân tích các biến phân loại
+- NAME_EDUCATION_TYPE: Nhóm khách hàng có trình độ học vấn thấp (Lower 
+  secondary) thường có tỷ lệ vỡ nợ cao hơn so với nhóm có trình độ cao 
+  (Academic degree).
+- CODE_GENDER: Phân tích cho thấy nữ giới thường có tỷ lệ trả nợ tốt hơn 
+  nam giới trong bộ dữ liệu này.
+- OCCUPATION_TYPE: Một số nghề nghiệp có tỷ lệ rủi ro cao hơn đáng kể so 
+  với các nghề khác.
+- ORGANIZATION_TYPE: Loại tổ chức nơi khách hàng làm việc cũng là một yếu 
+  tố quan trọng trong việc đánh giá rủi ro.
+
+3.3. Phân tích đa biến (Multivariate Analysis)
+3.3.1. Mối quan hệ giữa độ tuổi, thu nhập với khả năng nợ xấu
+Phân tích cho thấy:
+- Khách hàng trẻ tuổi với thu nhập thấp có tỷ lệ rủi ro cao nhất
+- Khách hàng lớn tuổi với thu nhập ổn định có tỷ lệ rủi ro thấp nhất
+- Tỷ lệ tín dụng trên thu nhập (Credit_Income_Ratio) là một chỉ số quan 
+  trọng: tỷ lệ càng cao, rủi ro càng lớn
+
+3.3.2. Sự khác biệt về rủi ro giữa các nhóm học vấn và loại nhà ở
+- Nhóm học vấn: Khách hàng có trình độ học vấn cao hơn thường có khả năng 
+  quản lý tài chính tốt hơn, dẫn đến tỷ lệ vỡ nợ thấp hơn.
+- Loại nhà ở: Khách hàng sở hữu nhà ở (FLAG_OWN_REALTY = 1) thường có rủi 
+  ro thấp hơn so với khách hàng không sở hữu.
+
+3.4. Trực quan hóa (Visualization)
+3.4.1. Biểu đồ phân phối (KDE Plot)
+Các biểu đồ KDE Plot được sử dụng để so sánh phân phối của các biến số liên 
+tục giữa hai nhóm TARGET = 0 và TARGET = 1. Điều này giúp xác định các biến 
+có khả năng phân tách tốt giữa hai lớp.
+
+3.4.2. Biểu đồ tương quan (Heatmap)
+Ma trận tương quan được tạo ra để:
+- Kiểm tra đa cộng tuyến giữa các biến trong Top 20
+- Xác định các nhóm biến có tương quan cao, có thể cần xử lý để tránh ảnh 
+  hưởng đến hiệu năng mô hình
+- Phát hiện các mối quan hệ tiềm ẩn giữa các biến
+
+4. DATA PRE-PROCESSING & FEATURE SELECTION (TIỀN XỬ LÝ & CHỌN LỌC ĐẶC TRƯNG)
+================================================================================
+
+4.1. Làm sạch dữ liệu (Data Cleaning)
+4.1.1. Xử lý giá trị thiếu (Missing Value Imputation)
+- Biến số (Numeric): Điền bằng giá trị Median để tránh ảnh hưởng của các 
+  giá trị ngoại lai
+- Biến phân loại (Categorical): Điền bằng giá trị "Missing" để tạo thành 
+  một nhóm riêng, có thể chứa thông tin hữu ích
+
+4.1.2. Xử lý giá trị ngoại lai (Anomalies Handling)
+Một trong những vấn đề nổi bật trong bộ dữ liệu Home Credit là biến 
+DAYS_EMPLOYED (số ngày làm việc):
+- Vấn đề: Có giá trị 365243 (tương đương khoảng 1000 năm), đây là mã lỗi 
+  hoặc ký hiệu cho trạng thái "Thất nghiệp/Về hưu"
+- Giải pháp: Thay thế giá trị 365243 bằng NaN, sau đó xử lý như giá trị 
+  thiếu thông thường
+- Xử lý giá trị vô cực: Tất cả các giá trị Inf và -Inf được chuyển đổi 
+  thành NaN trước khi thực hiện imputation
+
+4.2. Mã hóa (Encoding)
+Để các mô hình máy học có thể xử lý, các biến định tính cần được chuyển đổi 
+sang dạng số:
+- Label Encoding: Áp dụng cho các biến phân loại có thứ tự (ordinal)
+- One-hot Encoding: Áp dụng cho các biến phân loại không có thứ tự (nominal) 
+  với số lượng giá trị không quá lớn
+- Target Encoding: Có thể được xem xét cho các biến phân loại có số lượng 
+  giá trị lớn
+
+4.3. Đánh giá trọng số biến - Phương pháp Weight of Evidence (WoE) và 
+     Information Value (IV)
+4.3.1. Giới thiệu phương pháp
+Đây là phương pháp trọng tâm của nghiên cứu để đánh giá và chọn lọc đặc trưng. 
+Thay vì chọn các biến một cách thủ công hoặc dựa trên kinh nghiệm, nghiên 
+cứu sử dụng WoE và IV để tự động đánh giá mức độ dự báo của từng đặc trưng.
+
+- Weight of Evidence (WoE): Đo lường sức mạnh của mối quan hệ giữa một đặc 
+  trưng và biến mục tiêu. WoE được tính bằng công thức:
+  WoE = ln((Dist_Good + ε) / (Dist_Bad + ε))
+  trong đó Dist_Good và Dist_Bad là phân phối của lớp "tốt" và "xấu" trong 
+  từng bin của đặc trưng.
+
+- Information Value (IV): Tổng hợp sức mạnh dự báo của toàn bộ đặc trưng:
+  IV = Σ(Dist_Good - Dist_Bad) × WoE
+  IV càng cao, đặc trưng càng có khả năng dự đoán tốt.
+
+4.3.2. Quy trình phân tích
+1. Phân tích toàn bộ 120+ đặc trưng trong bộ dữ liệu ban đầu
+2. Tính toán WoE và IV cho từng đặc trưng
+3. Sắp xếp các đặc trưng theo IV giảm dần
+4. Chọn Top 20 đặc trưng có IV cao nhất để xây dựng mô hình
+
+4.3.3. Kết quả phân tích IV
+Dựa trên kết quả phân tích, Top 20 đặc trưng được chọn có IV như sau:
+
+1. EXT_SOURCE_3: IV = 0.329 (Rất mạnh)
+2. EXT_SOURCE_2: IV = 0.306 (Rất mạnh)
+3. EXT_SOURCE_1: IV = 0.151 (Mạnh)
+4. DAYS_EMPLOYED: IV = 0.101 (Mạnh)
+5. AMT_GOODS_PRICE: IV = 0.092 (Mạnh)
+6. DAYS_BIRTH: IV = 0.084 (Mạnh)
+7. OCCUPATION_TYPE: IV = 0.083 (Mạnh)
+8. ORGANIZATION_TYPE: IV = 0.073 (Mạnh)
+9. NAME_INCOME_TYPE: IV = 0.060 (Trung bình)
+10. REGION_RATING_CLIENT_W_CITY: IV = 0.051 (Trung bình)
+11. NAME_EDUCATION_TYPE: IV = 0.051 (Trung bình)
+12. REGION_RATING_CLIENT: IV = 0.048 (Trung bình)
+13. DAYS_LAST_PHONE_CHANGE: IV = 0.047 (Trung bình)
+14. AMT_CREDIT: IV = 0.045 (Trung bình)
+15. CODE_GENDER: IV = 0.039 (Trung bình)
+16. FLOORSMAX_AVG: IV = 0.039 (Trung bình)
+17. DAYS_ID_PUBLISH: IV = 0.038 (Trung bình)
+18. FLOORSMAX_MEDI: IV = 0.038 (Trung bình)
+19. FLOORSMAX_MODE: IV = 0.038 (Trung bình)
+20. TOTALAREA_MODE: IV = 0.036 (Trung bình)
+
+Theo quy tắc đánh giá IV:
+- IV < 0.02: Không có khả năng dự đoán
+- 0.02 ≤ IV < 0.1: Khả năng dự đoán yếu đến trung bình
+- 0.1 ≤ IV < 0.3: Khả năng dự đoán mạnh
+- IV ≥ 0.3: Khả năng dự đoán rất mạnh
+
+4.3.4. Trực quan hóa kết quả
+- Biểu đồ IV Summary: Hiển thị Top 20 đặc trưng với ngưỡng IV = 0.02 được 
+  đánh dấu
+- Biểu đồ WoE: Vẽ cho từng đặc trưng trong Top 20, thể hiện mối quan hệ 
+  giữa các bin và rủi ro
+
+4.4. Feature Engineering
+Sau khi chọn được Top 20 đặc trưng, một số đặc trưng mới được tạo ra để 
+cải thiện khả năng dự đoán:
+- Credit_Income_Ratio = AMT_CREDIT / AMT_INCOME_TOTAL: Tỷ lệ tín dụng trên 
+  thu nhập, đo lường áp lực tài chính
+- Annuity_Income_Ratio = AMT_ANNUITY / AMT_INCOME_TOTAL: Tỷ lệ trả nợ hàng 
+  năm trên thu nhập, đo lường khả năng trả nợ
+
+5. MODEL SELECTION & METHODOLOGY (LỰA CHỌN MÔ HÌNH & PHƯƠNG PHÁP)
+================================================================================
+
+5.1. Thiết lập mô hình
+Nghiên cứu lựa chọn 3 mô hình máy học để so sánh hiệu năng:
+
+5.1.1. Logistic Regression
+- Lý do chọn: Mô hình tuyến tính đơn giản, dễ giải thích, thường được sử 
+  dụng làm baseline trong các bài toán phân loại nhị phân. Logistic 
+  Regression cung cấp xác suất đầu ra, phù hợp với yêu cầu dự đoán Probability 
+  of Default.
+- Ưu điểm: Dễ hiểu, nhanh, ít tham số cần tinh chỉnh, có thể giải thích được 
+  tác động của từng biến
+- Nhược điểm: Giả định mối quan hệ tuyến tính, có thể không nắm bắt được 
+  các mối quan hệ phi tuyến phức tạp
+
+5.1.2. XGBoost (Extreme Gradient Boosting)
+- Lý do chọn: Mô hình ensemble mạnh mẽ, đã đạt được nhiều thành công trong 
+  các cuộc thi Kaggle, đặc biệt là với dữ liệu có cấu trúc. XGBoost có khả 
+  năng xử lý tốt dữ liệu mất cân bằng và tự động nắm bắt các mối quan hệ 
+  phi tuyến.
+- Ưu điểm: Hiệu năng cao, xử lý tốt dữ liệu mất cân bằng, có thể xử lý giá 
+  trị thiếu, cung cấp feature importance
+- Nhược điểm: Phức tạp hơn, cần tinh chỉnh nhiều siêu tham số, khó giải thích
+
+5.1.3. LightGBM (Light Gradient Boosting Machine)
+- Lý do chọn: Mô hình gradient boosting được tối ưu hóa về tốc độ và bộ nhớ, 
+  phù hợp với dữ liệu lớn. LightGBM thường cho kết quả tương đương hoặc tốt 
+  hơn XGBoost với thời gian huấn luyện ngắn hơn.
+- Ưu điểm: Nhanh, hiệu quả về bộ nhớ, xử lý tốt dữ liệu mất cân bằng, hỗ trợ 
+  categorical features trực tiếp
+- Nhược điểm: Có thể dễ overfitting nếu không tinh chỉnh đúng cách
+
+5.2. Chiến lược kiểm thử
+5.2.1. Stratified K-Fold Cross-Validation
+Để đối phó với dữ liệu mất cân bằng và đảm bảo đánh giá mô hình một cách 
+công bằng, nghiên cứu sử dụng Stratified K-Fold Cross-Validation:
+- K = 5: Chia dữ liệu thành 5 fold
+- Stratified: Đảm bảo tỷ lệ TARGET = 1 trong mỗi fold giữ nguyên như tỷ 
+  lệ trong toàn bộ dữ liệu (~8%)
+- Mỗi fold được sử dụng một lần làm tập kiểm thử, 4 fold còn lại làm tập 
+  huấn luyện
+- Kết quả cuối cùng là trung bình của 5 lần đánh giá
+
+5.2.2. Tách dữ liệu
+- Tập huấn luyện: 80% dữ liệu ban đầu
+- Tập kiểm thử: 20% dữ liệu ban đầu (giữ nguyên để đánh giá cuối cùng)
+- Tập validation: Được tạo từ tập huấn luyện thông qua cross-validation
+
+5.3. Kỹ thuật tối ưu
+5.3.1. Tinh chỉnh siêu tham số (Hyperparameter Tuning)
+Mỗi mô hình có các siêu tham số quan trọng cần được tinh chỉnh:
+
+- Logistic Regression:
+  * C: Tham số điều chỉnh độ mạnh của regularization
+  * class_weight: Điều chỉnh trọng số cho các lớp mất cân bằng
+  * solver: Thuật toán tối ưu (lbfgs, liblinear, saga)
+
+- XGBoost:
+  * n_estimators: Số lượng cây
+  * max_depth: Độ sâu tối đa của cây
+  * learning_rate: Tốc độ học
+  * subsample: Tỷ lệ mẫu con
+  * colsample_bytree: Tỷ lệ đặc trưng
+  * scale_pos_weight: Trọng số cho lớp thiểu số
+
+- LightGBM:
+  * n_estimators: Số lượng cây
+  * max_depth: Độ sâu tối đa
+  * learning_rate: Tốc độ học
+  * num_leaves: Số lá tối đa
+  * class_weight: Trọng số lớp
+
+Phương pháp tinh chỉnh: Grid Search hoặc Random Search kết hợp với 
+cross-validation để tìm bộ siêu tham số tối ưu.
+
+5.3.2. Xử lý mất cân bằng lớp (Class Imbalance Handling)
+Hai kỹ thuật chính được áp dụng:
+
+a) Class Weight:
+- Điều chỉnh trọng số trong hàm loss để mô hình chú ý nhiều hơn đến lớp 
+  thiểu số (TARGET = 1)
+- Công thức: class_weight = {0: 1, 1: n_samples_0 / n_samples_1}
+- Áp dụng cho: Logistic Regression, XGBoost, LightGBM
+
+b) SMOTE (Synthetic Minority Oversampling Technique):
+- Tạo dữ liệu giả lập cho lớp thiểu số bằng cách nội suy giữa các mẫu gần nhau
+- Tăng số lượng mẫu lớp thiểu số để cân bằng với lớp đa số
+- Áp dụng trước khi huấn luyện mô hình
+
+5.4. Chỉ số đánh giá
+Do tính chất mất cân bằng của dữ liệu, các chỉ số sau được sử dụng:
+
+- ROC-AUC (Area Under the ROC Curve): Chỉ số chính, đánh giá khả năng phân 
+  tách giữa hai lớp của mô hình. AUC càng gần 1 càng tốt.
+- Gini Coefficient: Thường được sử dụng trong ngành ngân hàng, 
+  Gini = 2 × AUC - 1
+- G-Mean: Căn bậc hai của tích Sensitivity và Specificity, phù hợp với 
+  dữ liệu mất cân bằng
+- MCC (Matthews Correlation Coefficient): Hệ số tương quan Matthews, đánh 
+  giá tại ngưỡng cắt tối ưu
+
+6. EVALUATION & DISCUSSION (ĐÁNH GIÁ & THẢO LUẬN)
+================================================================================
+
+6.1. So sánh hiệu năng
+[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+
+6.2. AUC Score
+[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+
+6.3. G-Mean & MCC
+[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+
+6.4. Ngưỡng quyết định (Threshold Tuning)
+[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+
+6.5. Độ quan trọng của biến (Feature Importance)
+[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+
+7. CONCLUSION & RECOMMENDATIONS (KẾT LUẬN & KIẾN NGHỊ)
+================================================================================
+
+7.1. Kết luận
+[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+
+7.2. Kiến nghị kinh doanh
+[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+
+7.3. Hướng phát triển
+[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+
+8. APPENDIX & REFERENCES (PHỤ LỤC & TÀI LIỆU THAM KHẢO)
+================================================================================
+
+8.1. Link mã nguồn
+- GitHub Repository: [Link sẽ được cập nhật]
+- Kaggle Competition: Home Credit Default Risk
+  https://www.kaggle.com/c/home-credit-default-risk
+
+8.2. Danh mục các thư viện Python đã sử dụng
+- pandas: Xử lý và phân tích dữ liệu
+- numpy: Tính toán số học và đại số tuyến tính
+- matplotlib: Vẽ biểu đồ cơ bản
+- seaborn: Vẽ biểu đồ thống kê nâng cao
+- scikit-learn: Machine learning (Logistic Regression, metrics, 
+  cross-validation, SMOTE)
+- xgboost: Mô hình XGBoost
+- lightgbm: Mô hình LightGBM
+- imbalanced-learn: Xử lý dữ liệu mất cân bằng (SMOTE)
+
+8.3. Tài liệu tham khảo
+1. Home Credit Default Risk Competition. Kaggle. 
+   https://www.kaggle.com/c/home-credit-default-risk
+
+2. Chen, T., & Guestrin, C. (2016). XGBoost: A Scalable Tree Boosting System. 
+   Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge 
+   Discovery and Data Mining.
+
+3. Ke, G., et al. (2017). LightGBM: A Highly Efficient Gradient Boosting 
+   Decision Tree. Advances in Neural Information Processing Systems.
+
+4. Chawla, N. V., et al. (2002). SMOTE: Synthetic Minority Over-sampling 
+   Technique. Journal of Artificial Intelligence Research.
+
+5. Siddiqi, N. (2012). Credit Risk Scorecards: Developing and Implementing 
+   Intelligent Credit Scoring. Wiley.
+
+6. Anderson, R. (2007). The Credit Scoring Toolkit: Theory and Practice for 
+   Retail Credit Risk Management and Decision Analytics. Oxford University Press.
+
+7. Baesens, B., et al. (2016). Analytics in a Big Data World: The Essential 
+   Guide to Data Science and its Applications. Wiley.
+
+8. Provost, F., & Fawcett, T. (2013). Data Science for Business: What You Need 
+   to Know about Data Mining and Data-Analytic Thinking. O'Reilly Media.
+
+================================================================================
+                              HẾT BÁO CÁO
+================================================================================
+

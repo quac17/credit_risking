@@ -1,0 +1,29 @@
+Vấn đề: Với dữ liệu tài chính mất cân bằng, ngưỡng 0.5 thường không tốt (nó có xu hướng dự đoán toàn bộ là an toàn).
+Giải pháp: Thay vì dùng ngưỡng 0.5, chúng ta sẽ chạy một thuật toán để tìm ra "Ngưỡng vàng" (Optimal Threshold). Tại ngưỡng này, giá trị G-mean hoặc MCC đạt cực đại.
+•	G-mean: Đảm bảo mô hình giỏi cả việc bắt người nợ xấu VÀ nhận diện người uy tín.
+$$G\text{-}mean = \sqrt{Sensitivity \times Specificity}$$
+•	MCC: Được coi là chỉ số tin cậy nhất cho dữ liệu mất cân bằng, đánh giá toàn diện cả 4 chỉ số (TP, TN, FP, FN).
+________________________________________
+2. Quy trình thực hiện (Workflow)
+Bạn sẽ áp dụng quy trình này sau khi đã huấn luyện xong mô hình XGBoost (hoặc Logistic Regression).
+Bước 1: Dự đoán xác suất (Prediction Probabilities)
+Thay vì dùng hàm .predict() (trả về 0 hoặc 1), bạn phải dùng hàm .predict_proba() trên tập Test.
+•	Kết quả: Bạn có một danh sách xác suất vỡ nợ của từng khách hàng (ví dụ: [0.12, 0.85, 0.03, ...]).
+Bước 2: Tính toán AUC (Area Under Curve)
+•	Vẽ đường cong ROC từ danh sách xác suất trên.
+•	Tính diện tích dưới đường cong (AUC).
+•	Ý nghĩa: AUC cho biết mô hình phân loại tốt đến mức nào một cách tổng quát, bất chấp ngưỡng cắt là bao nhiêu.
+Bước 3: Vòng lặp tìm ngưỡng tối ưu (Threshold Tuning Loop)
+Đây là bước "ăn điểm" sáng tạo:
+1.	Tạo một danh sách các ngưỡng từ 0 đến 1 (ví dụ: 0.1, 0.11, 0.12, ..., 0.99).
+2.	Với mỗi ngưỡng (ví dụ 0.2):
+o	Gán nhãn tất cả xác suất > 0.2 thành 1 (Vỡ nợ), còn lại là 0.
+o	Tính toán G-mean và MCC tại ngưỡng đó.
+3.	Lưu lại kết quả.
+Bước 4: Chọn ngưỡng tốt nhất (Selection)
+•	Tìm ngưỡng mà tại đó G-mean lớn nhất (Ưu tiên cân bằng).
+•	Hoặc tìm ngưỡng mà tại đó MCC lớn nhất (Ưu tiên độ chính xác tổng thể).
+•	Ví dụ: Bạn phát hiện ra rằng nếu hạ ngưỡng xuống 0.35 (thay vì 0.5), chỉ số MCC tăng vọt từ 0.4 lên 0.55.
+Bước 5: Đánh giá cuối cùng
+•	Áp dụng ngưỡng 0.35 này để đưa ra quyết định duyệt vay cuối cùng.
+•	So sánh hiệu quả kinh tế: Bắt được thêm bao nhiêu khách hàng nợ xấu so với ngưỡng mặc định?

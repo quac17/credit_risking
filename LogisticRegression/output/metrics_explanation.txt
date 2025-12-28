@@ -1,0 +1,23 @@
+NHẬN XÉT KẾT QUẢ THỰC TẾ (BASED ON ACCURACY.CSV)
+--------------------------------------------------
+
+Dựa trên bảng kết quả chạy thực nghiệm:
+
+| Dataset                  | Accuracy | AUC   | MCC   | G-mean |
+| :----------------------- | :------- | :---- | :---- | :----- |
+| Train (40.000 dòng)      | 0.637    | 0.687 | 0.157 | 0.640  |
+| Supervised Test (10.000) | 0.635    | 0.695 | 0.160 | 0.644  |
+
+*   Nhận xét về Độ ổn định: 
+    Điểm đặc biệt của Logistic Regression ở đây là kết quả trên tập **Supervised Test** 
+    thậm chí hơi nhỉnh hơn tập Train (AUC 0.695 so với 0.687). Điều này chứng tỏ 
+    mô hình cực kỳ ổn định và không hề bị Overfitting.
+
+*   Nhận xét về AUC:
+    Với AUC ~0.69, mô hình này đủ điều kiện để làm "vạch xuất phát" (Baseline). 
+    Mọi mô hình phức tạp hơn (XGBoost, LightGBM) cần phải vượt qua con số này để 
+    chứng minh giá trị.
+
+*   Sử dụng thực tế:
+    Dùng để hiểu sức mạnh tác động của từng biến (feature) đến rủi ro nhờ vào các 
+    hệ số (coefficients) dễ đọc.

@@ -265,7 +265,22 @@ cải thiện khả năng dự đoán:
 5. MODEL SELECTION & METHODOLOGY (LỰA CHỌN MÔ HÌNH & PHƯƠNG PHÁP)
 ================================================================================
 
-5.1. Thiết lập mô hình
+5.1. Thiết lập bộ dữ liệu thực nghiệm
+Để đảm bảo tính khả thi về tính toán và khả năng kiểm chứng mô hình, dự án đã trích xuất 
+các tập dữ liệu con (subsets) từ bộ dữ liệu gốc:
+
+- Tập huấn luyện (subset_train_data.csv): Gồm 40,000 dòng đầu tiên của tập Train. 
+  Tập này được sử dụng để học các tham số mô hình và thực hiện validation nội bộ.
+- Tập kiểm chứng có giám sát (subset_train2_data.csv): Gồm 10,000 dòng tiếp theo 
+  (dòng 40,001 - 50,000). Tập này được tách biệt hoàn toàn trong quá trình huấn luyện, 
+  dùng để đánh giá khả năng tổng quát hóa (generalization) vì vẫn có nhãn TARGET thực tế.
+- Tập dự đoán thực tế (subset_test_data.csv): Gồm 10,000 dòng từ bộ Test gốc, dùng để 
+  mô phỏng quy trình dự đoán cho khách hàng mới (không có nhãn).
+
+Tất cả các tập dữ liệu trên đều tập trung vào Top 20 đặc trưng quan trọng nhất đã 
+được xác định qua phân tích IV/WoE ở chương 4.
+
+5.2. Lựa chọn mô hình
 Nghiên cứu lựa chọn 3 mô hình máy học để so sánh hiệu năng:
 
 5.1.1. Logistic Regression
@@ -353,46 +368,59 @@ b) SMOTE (Synthetic Minority Oversampling Technique):
 - Áp dụng trước khi huấn luyện mô hình
 
 5.4. Chỉ số đánh giá
-Do tính chất mất cân bằng của dữ liệu, các chỉ số sau được sử dụng:
+Do tính chất mất cân bằng của dữ liệu, các chỉ số sau được sử dụng để đánh giá mô hình:
 
-- ROC-AUC (Area Under the ROC Curve): Chỉ số chính, đánh giá khả năng phân 
-  tách giữa hai lớp của mô hình. AUC càng gần 1 càng tốt.
-- Gini Coefficient: Thường được sử dụng trong ngành ngân hàng, 
-  Gini = 2 × AUC - 1
-- G-Mean: Căn bậc hai của tích Sensitivity và Specificity, phù hợp với 
-  dữ liệu mất cân bằng
-- MCC (Matthews Correlation Coefficient): Hệ số tương quan Matthews, đánh 
-  giá tại ngưỡng cắt tối ưu
+- Accuracy (Độ chính xác tổng thể): Tỷ lệ số mẫu dự đoán đúng trên tổng số mẫu. Trong bài toán nợ xấu (8-10%), Accuracy có thể cao ảo nếu mô hình đoán tất cả đều tốt.
+- ROC-AUC (Area Under the ROC Curve): Đánh giá khả năng phân tách giữa khách hàng Tốt và Xấu. AUC > 0.7 được coi là mức khá trong Scoring Credit.
+- MCC (Matthews Correlation Coefficient): Chỉ số tin cậy nhất cho dữ liệu mất cân bằng, đánh giá sự cân bằng của cả 4 chỉ số trong ma trận nhầm lẫn.
+- G-Mean: Căn bậc hai của tích Sensitivity và Specificity, giúp cực đại hóa hiệu quả bắt nợ xấu trong khi vẫn giữ khách hàng tốt.
+
+Quy trình tối ưu hóa ngưỡng (Threshold Optimization):
+Thay vì sử dụng ngưỡng mặc định 0.5, dự án thực hiện duyệt các ngưỡng từ 0.01 đến 0.99 để tìm điểm cực đại hóa MCC và G-Mean, từ đó đưa ra quyết định tín dụng chính xác nhất.
 
 6. EVALUATION & DISCUSSION (ĐÁNH GIÁ & THẢO LUẬN)
 ================================================================================
 
-6.1. So sánh hiệu năng
-[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+6.1. So sánh hiệu năng thực tế
+Dựa trên kết quả thử nghiệm có giám sát (Supervised Test - 10,000 dòng mới):
 
-6.2. AUC Score
-[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+| Mô hình             | Accuracy | AUC   | MCC   | G-mean |
+| :------------------ | :------- | :---- | :---- | :----- |
+| Logistic Regression | 0.635    | 0.695 | 0.160 | 0.644  |
+| XGBoost             | 0.877    | 0.731 | 0.207 | 0.520  |
+| LightGBM            | 0.852    | 0.738 | 0.210 | 0.570  |
+
+6.2. Phân tích AUC Score
+- LightGBM đạt hiệu năng cao nhất (AUC = 0.738), nhỉnh hơn XGBoost (0.731).
+- Cả hai mô hình Boosting đều vượt xa Baseline là Logistic Regression (0.695).
+- Sự sụt giảm AUC từ tập huấn luyện xuống tập kiểm thử cho thấy có hiện tượng overfitting nhẹ, đặc biệt là ở XGBoost và LightGBM.
 
 6.3. G-Mean & MCC
-[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+- Chỉ số MCC của cả 3 mô hình đều dương, khẳng định mô hình có khả năng dự báo tốt hơn ngẫu nhiên.
+- LightGBM cho thấy sự cân bằng tốt nhất giữa khả năng bắt nợ và giữ khách (G-mean = 0.570).
 
-6.4. Ngưỡng quyết định (Threshold Tuning)
-[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
-
-6.5. Độ quan trọng của biến (Feature Importance)
-[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+6.4. Feature Importance (Độ quan trọng của đặc trưng)
+Từ biểu đồ Feature Importance của XGBoost, 3 biến có tác động mạnh nhất là:
+1. EXT_SOURCE_3: Nguồn dữ liệu uy tín nhất từ bên thứ ba.
+2. EXT_SOURCE_2: Nguồn dữ liệu quan trọng thứ hai.
+3. DAYS_BIRTH: Tuổi của khách hàng (Khách hàng trẻ thường rủi ro hơn).
 
 7. CONCLUSION & RECOMMENDATIONS (KẾT LUẬN & KIẾN NGHỊ)
 ================================================================================
 
 7.1. Kết luận
-[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+- Dự án đã xây dựng thành công 3 mô hình dự đoán rủi ro tín dụng với hiệu năng đạt mức Khá (AUC ~ 0.74).
+- Phương pháp IV/WoE giúp giảm thiểu số lượng biến từ 120 xuống 20 mà vẫn giữ được độ chính xác cần thiết.
+- LightGBM được đề xuất là mô hình triển khai chính nhờ tốc độ và hiệu năng vượt trội.
 
 7.2. Kiến nghị kinh doanh
-[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+- Sử dụng ngưỡng (Threshold) tối ưu hóa theo MCC để phê duyệt khoản vay tự động.
+- Tập trung thu thập thêm dữ liệu từ các nguồn External Sources (1, 2, 3) vì đây là các biến "vàng".
+- Cần có quy trình thẩm định riêng cho nhóm khách hàng trẻ tuổi do tỷ lệ rủi ro cao hơn.
 
 7.3. Hướng phát triển
-[Đề mục - Nội dung sẽ được triển khai chi tiết sau]
+- Thử nghiệm các kỹ thuật lấy mẫu (Over/Under-sampling) kết hợp với Hyperparameter tuning sâu hơn.
+- Tích hợp thêm dữ liệu từ các bảng phụ (Bureau, Previous Applications) để tăng AUC lên mức > 0.8.
 
 8. APPENDIX & REFERENCES (PHỤ LỤC & TÀI LIỆU THAM KHẢO)
 ================================================================================

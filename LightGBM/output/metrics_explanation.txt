@@ -1,0 +1,22 @@
+NHẬN XÉT KẾT QUẢ THỰC TẾ (BASED ON ACCURACY.CSV)
+--------------------------------------------------
+
+Dựa trên bảng kết quả chạy thực nghiệm:
+
+| Dataset                  | Accuracy | AUC   | MCC   | G-mean |
+| :----------------------- | :------- | :---- | :---- | :----- |
+| Train (40.000 dòng)      | 0.860    | 0.814 | 0.277 | 0.632  |
+| Supervised Test (10.000) | 0.852    | 0.738 | 0.210 | 0.570  |
+
+*   Nhận xét về Hiệu năng: 
+    LightGBM đạt AUC tập Test (0.738) cao hơn một chút so với XGBoost (0.731) và 
+    vượt xa Logistic Regression (0.69). Đây là mô hình triển vọng nhất trong ba 
+    giải thuật đã thử nghiệm.
+
+*   Nhận xét về Overfitting:
+    Sự sụt giảm AUC từ 0.81 xuống 0.74 là mức chấp nhận được đối với các mô hình 
+    Boosting Tree. Tốc độ huấn luyện của LightGBM cũng nhanh nhất trong các mô hình.
+
+*   Sử dụng thực tế:
+    Đề xuất sử dụng làm mô hình dự báo chính nhờ khả năng xử lý biến phân loại mượt mà 
+    và độ chính xác cao trên dữ liệu chưa biết.

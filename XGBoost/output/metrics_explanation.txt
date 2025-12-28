@@ -1,0 +1,24 @@
+ NHẬN XÉT KẾT QUẢ THỰC TẾ (BASED ON ACCURACY.CSV)
+--------------------------------------------------
+
+Dựa trên bảng kết quả chạy thực nghiệm:
+
+| Dataset                  | Accuracy | AUC   | MCC   | G-mean |
+| :----------------------- | :------- | :---- | :---- | :----- |
+| Train (40.000 dòng)      | 0.897    | 0.865 | 0.382 | 0.677  |
+| Supervised Test (10.000) | 0.877    | 0.731 | 0.207 | 0.520  |
+
+*   Nhận xét về AUC: 
+    Mô hình đạt AUC 0.731 trên dữ liệu mới (Supervised Test). Đây là kết quả đạt yêu 
+    cầu trong lĩnh vực Scoring Credit. Sự sụt giảm từ 0.86 (Train) xuống 0.73 cho thấy 
+    mô hình có xu hướng Overfitting (học tủ), cần thực hiện Tuning thêm các tham số 
+    như 'max_depth' hoặc 'learning_rate' để tăng tính tổng quát.
+
+*   Nhận xét về MCC và G-mean:
+    Chỉ số MCC > 0 (0.207) khẳng định mô hình thực sự có khả năng dự báo chứ không 
+    chỉ đơn thuần đoán theo lớp đa số. G-mean 0.52 trên tập test cho thấy tại ngưỡng 
+    tối ưu hiện tại, mô hình đã bắt đầu nhận diện được các đặc điểm của nhóm nợ xấu.
+
+*   Sử dụng thực tế:
+    Với các chỉ số này, mô hình XGBoost đang là ứng cử viên tốt nhất để triển khai 
+    cho hệ thống chấm điểm tín dụng sơ bộ của dự án.

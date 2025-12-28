@@ -1,0 +1,101 @@
+================================================================================
+                    KHUNG SLIDE BÁO CÁO ĐỀ TÀI NGHIÊN CỨU
+          DỰ ĐOÁN RỦI RO TÍN DỤNG SỬ DỤNG MÔ HÌNH MÁY HỌC
+================================================================================
+
+SLIDE 1: TRANG TIÊU ĐỀ
+- Tên đề tài: Dự đoán rủi ro tín dụng sử dụng mô hình máy học (Dữ liệu Home Credit)
+- Giảng viên hướng dẫn: ...
+- Sinh viên thực hiện: ...
+- Ngày báo cáo: ...
+
+SLIDE 2: NỘI DUNG BÁO CÁO
+1. Giới thiệu & Vấn đề kinh doanh
+2. Mô tả dữ liệu & Phân tích EDA
+3. Tiền xử lý & Chọn lọc đặc trưng (WoE/IV)
+4. Phương pháp & Lựa chọn mô hình
+5. Đánh giá kết quả & Thảo luận
+6. Kết luận & Kiến nghị
+
+SLIDE 3: BỐI CẢNH DỰ ÁN
+- Đối tượng: Khách hàng "Unbanked" (không có lịch sử tín dụng truyền thống).
+- Mục tiêu: Dự đoán xác suất vỡ nợ (Probability of Default) từ dữ liệu thay thế.
+- Ý nghĩa: Mở rộng khả năng tiếp cận tài chính an toàn.
+
+SLIDE 4: VẤN ĐỀ KINH DOANH & THÁCH THỨC
+- Dữ liệu mất cân bằng nghiêm trọng (Tỷ lệ nợ xấu ~8%).
+- Dữ liệu thực tế nhiều nhiễu và giá trị bất thường.
+- Đòi hỏi mô hình có khả năng giải thích và độ chính xác cao.
+
+SLIDE 5: TỔNG QUAN DỮ LIỆU (HOME CREDIT DATA)
+- Nguồn: application_train.csv
+- Số lượng: 120+ đặc trưng ban đầu.
+- Các nhóm biến chính: Nhân khẩu học, Tài chính, Nguồn dữ liệu bên ngoài (External Sources), Tài sản...
+
+SLIDE 6: PHÂN TÍCH BIẾN MỤC TIÊU (TARGET)
+- Trực quan hóa tỷ lệ 92% (Tốt) vs 8% (Xấu).
+- Kết luận: Không thể sử dụng Accuracy làm chỉ số đánh giá duy nhất.
+
+SLIDE 7: TIỀN XỬ LÝ DỮ LIỆU
+- Xử lý giá trị thiếu: Sử dụng Median (biến số) và "Missing" (biến phân loại).
+- Xử lý giá trị bất thường: Sửa lỗi 365243 ngày làm việc trong biến DAYS_EMPLOYED.
+- Mã hóa: One-hot encoding cho các mô hình Boosting.
+
+SLIDE 8: PHƯƠNG PHÁP WOE & IV
+- Giải thích Weight of Evidence (WoE) và Information Value (IV).
+- Mục tiêu: Tự động đánh giá sức mạnh dự báo của 120+ biến để rút gọn tập dữ liệu.
+
+SLIDE 9: KẾT QUẢ CHỌN LỌC ĐẶC TRƯNG
+- Danh sách Top 20 đặc trưng có IV cao nhất.
+- Phân nhóm sức mạnh: 2 biến "Rất mạnh" (EXT_SOURCE_2,3), 6 biến "Mạnh".
+
+SLIDE 10: PHÂN TÍCH ĐẶC TRƯNG "VÀNG" (EXTERNAL SOURCES)
+- Biểu đồ mối tương quan giữa EXT_SOURCE và rủi ro nợ xấu.
+- Ý nghĩa: Các nguồn dữ liệu bên ngoài đóng vai trò quyết định trong việc phân loại khách hàng.
+
+SLIDE 11: THIẾT LẬP BỘ DỮ LIỆU THỰC NGHIỆM
+- Sampling: Trích xuất 40,000 dòng huấn luyện.
+- Supervised Test: 10,000 dòng mới hoàn toàn để kiểm chứng (Cross-validation).
+- Đảm bảo tính khả thi về tính toán mà vẫn giữ vững độ tin cậy.
+
+SLIDE 12: LỰA CHỌN MÔ HÌNH (MODEL SELECTION)
+- 03 mô hình đối trọng:
+  1. Logistic Regression (Baseline - Dễ giải thích).
+  2. XGBoost (Ensemble mạnh mẽ).
+  3. LightGBM (Tối ưu tốc độ & bộ nhớ).
+
+SLIDE 13: CHỈ SỐ ĐÁNH GIÁ (METRICS)
+- Giải thích bộ 4 chỉ số:
+  * AUC: Khả năng phân tách Tốt/Xấu.
+  * MCC: Tin cậy nhất cho dữ liệu mất cân bằng.
+  * G-mean: Cân bằng Sensitivity/Specificity.
+  * Accuracy: Độ chính xác tổng quan.
+
+SLIDE 14: CHIẾN LƯỢC TỐI ƯU HÓA NGƯỠNG (THRESHOLD TUNING)
+- Tại sao không dùng ngưỡng 0.5?
+- Phương pháp: Duyệt ngưỡng từ 0.01 đến 0.99 để tìm điểm "vàng" (Max MCC/G-mean).
+
+SLIDE 15: SO SÁNH HIỆU NĂNG THỰC TẾ
+- Bảng tổng hợp kết quả của 3 mô hình trên tập Supervised Test.
+- Quan sát AUC: LightGBM (0.738) > XGBoost (0.731) > Logistic (0.695).
+
+SLIDE 16: TRỰC QUAN HÓA TỐI ƯU NGƯỠNG
+- Hiển thị biểu đồ Threshold Tuning (Đường G-mean & MCC).
+- Giải thích điểm giao thoa và vị trí ngưỡng cắt tối ưu cho bài toán tín dụng.
+
+SLIDE 17: PHÂN TÍCH ĐỘ QUAN TRỌNG CỦA BIẾN (FEATURE IMPORTANCE)
+- Biểu đồ Feature Importance từ mô hình XGBoost.
+- Đối chiếu với kết quả IV ban đầu để khẳng định tính nhất quán của dữ liệu.
+
+SLIDE 18: KẾT LUẬN VỀ MÔ HÌNH TỐI ƯU
+- LightGBM là mô hình tốt nhất về cả hiệu năng (AUC) và tốc độ huấn luyện.
+- Khả năng tổng quát hóa đạt mức Khá (~0.74), đủ tiêu chuẩn triển khai thử nghiệm.
+
+SLIDE 19: KIẾN NGHỊ KINH DOANH
+- Áp dụng chấm điểm tự động cho nhóm khách hàng có điểm External Sources cao.
+- Chú ý rủi ro nhóm khách hàng trẻ tuổi (DAYS_BIRTH).
+- Tích hợp thêm dữ liệu bảng phụ để nâng cao AUC.
+
+SLIDE 20: LỜI CẢM ƠN & HỎI ĐÁP
+- Tóm tắt giá trị dự án.
+- Mời hội đồng đặt câu hỏi.

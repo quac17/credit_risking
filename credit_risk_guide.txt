@@ -1,0 +1,68 @@
+================================================================================
+      HƯỚNG DẪN CHI TIẾT CÁC CHỈ SỐ VÀ TỐI ƯU HÓA NGƯỠNG TRONG TÍN DỤNG
+================================================================================
+
+PHẦN 1: GIẢI THÍCH CÁC CHỈ SỐ ĐÁNH GIÁ (METRICS DEFINITION)
+------------------------------------------------------------
+
+* Accuracy (Độ chính xác tổng thể):
+  - Định nghĩa: Tỷ lệ số mẫu dự đoán đúng trên tổng số mẫu.
+  - Công thức: (TP + TN) / (TP + TN + FP + FN)
+  - Ý nghĩa: Là chỉ số cơ bản nhất. Tuy nhiên, trong tín dụng (nợ xấu chỉ ~8%), 
+    Accuracy có thể rất cao ngay cả khi mô hình đoán tất cả đều tốt. Vì vậy, 
+    chỉ số này không phản ánh đúng khả năng bắt nợ xấu.
+
+* AUC (Area Under the ROC Curve):
+  - Định nghĩa: Diện tích dưới đường cong ROC, biểu diễn khả năng phân tách 
+    giữa hai lớp khách hàng Tốt (0) và Xấu (1).
+  - Ý nghĩa: AUC = 0.5 là đoán ngẫu nhiên; AUC = 1.0 là hoàn hảo. 
+    Trong ngành tín dụng, AUC từ 0.7 đến 0.8 là mức Khá; trên 0.8 là Rất tốt.
+
+* MCC (Matthews Correlation Coefficient):
+  - Định nghĩa: Hệ số tương quan giữa giá trị thực tế và giá trị dự đoán.
+  - Ý nghĩa: Đây là chỉ số tin cậy nhất cho dữ liệu mất cân bằng. Nó đánh giá 
+    sự cân bằng của cả 4 chỉ số trong ma trận nhầm lẫn. Càng gần 1 càng tốt.
+
+* G-mean (Geometric Mean):
+  - Công thức: Căn bậc hai của (Sensitivity * Specificity).
+  - Ý nghĩa: Cực đại hóa hiệu quả bắt được khách hàng nợ xấu đồng thời giữ được 
+    độ chính xác khi nhận diện khách hàng tốt.
+
+
+PHẦN 2: TẠI SAO PHẢI TỐI ƯU HÓA NGƯỠNG QUYẾT ĐỊNH?
+--------------------------------------------------
+
+1. Tại sao ngưỡng mặc định 0.5 thường thất bại?
+- Dữ liệu mất cân bằng: Nợ xấu chỉ chiếm thiểu số. Nếu dùng ngưỡng 0.5, mô hình 
+  thường có xu hướng "an toàn" bằng cách dự báo tất cả khách hàng đều tốt.
+- Hậu quả sai lầm: Cho vay nhầm một người nợ xấu (mất vốn) nguy hiểm hơn nhiều 
+  so với từ chối nhầm một người tốt (mất lãi).
+
+2. Khái niệm "Ngưỡng vàng" (Optimal Threshold)
+"Ngưỡng vàng" là điểm mà tại đó mô hình đạt được sự cân bằng hoàn hảo nhất giữa 
+lợi ích kinh tế và quản trị rủi ro. Điểm này thường là nơi MCC hoặc G-mean 
+đạt giá trị cực đại.
+
+
+PHẦN 3: QUY TRÌNH THỰC HIỆN "HÓA GIẢI" NGƯỠNG
+----------------------------------------------
+
+Bước 1: Thu thập xác suất (predict_proba)
+Giữ lại mức độ rủi ro (ví dụ: 0.12, 0.45...) thay vì nhãn 0/1 cứng nhắc.
+
+Bước 2: Thử nghiệm giả định (Simulation)
+Chạy vòng lặp thay đổi ngưỡng cắt từ 0.01 đến 0.99. Với mỗi ngưỡng, tính toán 
+lại các chỉ số đánh giá để xem sự "đánh đổi".
+
+Bước 3: Chọn điểm tối ưu
+Vẽ biểu đồ và chọn ngưỡng làm cực đại hóa các chỉ số quan trọng (thường ưu tiên 
+MCC cho dữ liệu mất cân bằng).
+
+
+PHẦN 4: Ý NGHĨA KINH DOANH
+---------------------------
+Tối ưu ngưỡng giúp ngân hàng điều chỉnh chính sách linh hoạt:
+- Thắt chặt: Tăng ngưỡng để giảm rủi ro mất vốn.
+- Mở rộng: Hạ ngưỡng để chấp nhận thêm khách hàng tiềm năng.
+
+=> Đây chính là bước chuyển hóa mô hình toán học thành công cụ kinh doanh thực thụ.

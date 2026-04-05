@@ -25,23 +25,14 @@ Do dữ liệu gốc rất lớn, chúng ta thực hiện trích xuất các t�
 - Chạy lệnh: `python sample_data.py`
 - Kết quả: Tạo ra các file `subset_train_data.csv` (40k), `subset_train2_data.csv` (10k kiểm chứng), `subset_test_data.csv` (10k dự đoán).
 
-### Bước 3: Huấn luyện & Tham chiếu mô hình
-Dự án triển khai đồng thời 3 thuật toán để so sánh:
-- **Logistic Regression**: Mô hình cơ sở (Baseline), cực kỳ ổn định.
-- **XGBoost**: Mô hình Ensemble mạnh mẽ, xử lý tốt quan hệ phi tuyến.
-- **LightGBM**: Tối ưu tốc độ huấn luyện và khả năng xử lý biến phân loại.
-
-**Cách chạy từng mô hình:**
-- Logistic Regression: `python LogisticRegression/process.py`
-- XGBoost: `python XGBoost/process.py`
-- LightGBM: `python LightGBM/process.py`
+### Bước 3: Huấn luyện mô hình
+Đặc tả hướng **deep learning / xếp hạng tín dụng đa cấp** nằm trong `CREDIT_RATING_DEEP_LEARNING.md`. Các pipeline tiền xử lý (IV/WoE, `sample_data.py`) vẫn dùng chung cho bước này.
 
 ### Bước 4: Tối ưu hóa ngưỡng & Đánh giá (Threshold Optimization)
-Mô hình sẽ không dùng ngưỡng mặc định 0.5 mà thực hiện duyệt ngưỡng từ 0.01 đến 0.99 để tìm điểm cực đại hóa **MCC** và **G-mean**.
-- Kết quả và biểu đồ tối ưu được lưu trong thư mục `output/` của từng mô hình.
+Khi có xác suất rủi ro từ mô hình, có thể không dùng ngưỡng mặc định 0.5 mà duyệt ngưỡng từ 0.01 đến 0.99 để cực đại hóa **MCC** và **G-mean** (xem `credit_risk_guide.txt`).
 
 ## 4. Cấu trúc thư mục (Project Structure)
-- `XGBoost/`, `LightGBM/`, `LogisticRegression/`: Mã nguồn và kết quả của từng mô hình.
+- `CREDIT_RATING_DEEP_LEARNING.md`: Mô tả kiến trúc và bài toán xếp hạng tín dụng (deep learning).
 - `data/`: Thư mục chứa dữ liệu gốc (nếu có).
 - `sample_data.py`: Script lấy mẫu dữ liệu.
 - `credit_risk_guide.txt`: Hướng dẫn chuyên sâu về các chỉ số (AUC, MCC, G-mean).

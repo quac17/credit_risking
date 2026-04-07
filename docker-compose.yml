@@ -1,0 +1,77 @@
+# Toàn pipeline: WoE → simplified → sample → train / validate / test (DL).
+# Chạy từ thư mục gốc: docker compose run --rm <service>
+# Hoặc: bash scripts/docker-compose.sh <tên>
+
+x-app-common: &app-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: credit-risking:local
+  working_dir: /workspace
+  volumes:
+    - .:/workspace
+  environment:
+    PYTHONUNBUFFERED: "1"
+    KMP_DUPLICATE_LIB_OK: "TRUE"
+    OMP_NUM_THREADS: "1"
+    MKL_NUM_THREADS: "1"
+
+services:
+  app:
+    <<: *app-common
+    stdin_open: true
+    tty: true
+    command: bash
+
+  woe-analysis:
+    <<: *app-common
+    working_dir: /workspace/filter_data
+    command: ["python", "run_woe_analysis.py"]
+
+  create-simplified:
+    <<: *app-common
+    command: ["python", "create_simplified_data.py"]
+
+  sample-data:
+    <<: *app-common
+    command: ["python", "sample_data.py"]
+
+  train-mlp-softmax:
+    <<: *app-common
+    command: ["python", "deep_credit_rating/mlp_softmax/train.py"]
+
+  validate-mlp-softmax:
+    <<: *app-common
+    command:
+      - "python"
+      - "deep_credit_rating/mlp_softmax/validate.py"
+      - "--checkpoint-dir"
+      - "deep_credit_rating/outputs/mlp_softmax"
+
+  test-mlp-softmax:
+    <<: *app-common
+    command:
+      - "python"
+      - "deep_credit_rating/mlp_softmax/test.py"
+      - "--checkpoint-dir"
+      - "deep_credit_rating/outputs/mlp_softmax"
+
+  train-mlp-coral:
+    <<: *app-common
+    command: ["python", "deep_credit_rating/mlp_coral/train.py"]
+
+  validate-mlp-coral:
+    <<: *app-common
+    command:
+      - "python"
+      - "deep_credit_rating/mlp_coral/validate.py"
+      - "--checkpoint-dir"
+      - "deep_credit_rating/outputs/mlp_coral"
+
+  test-mlp-coral:
+    <<: *app-common
+    command:
+      - "python"
+      - "deep_credit_rating/mlp_coral/test.py"
+      - "--checkpoint-dir"
+      - "deep_credit_rating/outputs/mlp_coral"

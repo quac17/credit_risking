@@ -1,0 +1,9 @@
+# Phụ thuộc tối thiểu cho Credit Risk / deep_credit_rating (Linux container).
+# PyTorch CPU được cài trong Dockerfile (wheel ổn định, không dùng optree lỗi Windows).
+pandas>=2.0,<3
+numpy>=1.26,<2.2
+scikit-learn>=1.4,<2
+scipy>=1.11
+matplotlib>=3.8
+seaborn>=0.13
+joblib>=1.3

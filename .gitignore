@@ -208,3 +208,6 @@ __marimo__/
 
 # Data
 data/
+
+# Deep learning checkpoints (credit rating)
+deep_credit_rating/outputs/

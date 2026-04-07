@@ -1,13 +1,24 @@
+import os
+from pathlib import Path
 
 import pandas as pd
-import os
 import woe_iv_utils as utils
 
+# Luôn resolve theo gốc dự án (thư mục cha của filter_data/), không phụ thuộc cwd —
+# cần khi chạy trong Docker với working_dir=/workspace/filter_data.
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_PROJECT_ROOT = _SCRIPT_DIR.parent
+_DEFAULT_TRAIN = _PROJECT_ROOT / "data" / "application_train.csv"
+
+
 def main():
-    # Load data
-    file_path = './data/application_train.csv'
-    if not os.path.exists(file_path):
-        print(f"Error: {file_path} not found.")
+    file_path = _DEFAULT_TRAIN
+    if not file_path.is_file():
+        print(
+            f"Error: không tìm thấy {file_path}.\n"
+            "Đặt file gốc Home Credit (Kaggle) vào thư mục data/ của dự án, "
+            "ví dụ data/application_train.csv trên máy host — Docker mount cả repo nên đường dẫn giống khi chạy local."
+        )
         return
 
     print(f"Loading data from {file_path}...")
@@ -23,10 +34,9 @@ def main():
     
     all_results = []
     
-    # Create output directory
-    output_dir = 'filter_output'
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    # Cùng đường dẫn với create_simplified_data.py: <gốc dự án>/filter_output/
+    output_dir = str(_PROJECT_ROOT / "filter_output")
+    os.makedirs(output_dir, exist_ok=True)
 
     for feature in feature_cols:
         print(f"Analyzing {feature}...")
@@ -69,7 +79,7 @@ def main():
     print("\nGenerating IV Summary plot for top 20 features...")
     utils.plot_iv_summary(iv_summary_list, output_dir)
     
-    print(f"\nAnalysis complete. Top 20 results in '{output_dir}' directory.")
+    print(f"\nAnalysis complete. Top 20 results in directory:\n  {output_dir}")
 
 if __name__ == "__main__":
     main()

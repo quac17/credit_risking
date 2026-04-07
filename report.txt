@@ -275,97 +275,38 @@ các tập dữ liệu con (subsets) từ bộ dữ liệu gốc:
   (dòng 40,001 - 50,000). Tập này được tách biệt hoàn toàn trong quá trình huấn luyện, 
   dùng để đánh giá khả năng tổng quát hóa (generalization) vì vẫn có nhãn TARGET thực tế.
 - Tập dự đoán thực tế (subset_test_data.csv): Gồm 10,000 dòng từ bộ Test gốc, dùng để 
-  mô phỏng quy trình dự đoán cho khách hàng mới (không có nhãn).
+  mô phỏng quy trình dự đoán cho khách hàng mới (có thể không có nhãn TARGET).
+- Tập validation tách riêng (simplified_validate_data.csv): 10,000 dòng tiếp theo sau 
+  subset_train và subset_train2, có TARGET, dùng đánh giá mô hình deep learning sau khi huấn luyện.
 
 Tất cả các tập dữ liệu trên đều tập trung vào Top 20 đặc trưng quan trọng nhất đã 
 được xác định qua phân tích IV/WoE ở chương 4.
 
-5.2. Lựa chọn mô hình
-Nghiên cứu lựa chọn 3 mô hình máy học để so sánh hiệu năng:
+5.2. Lựa chọn mô hình (Deep Learning — cập nhật)
+Nghiên cứu hiện tại triển khai hai kiến trúc deep learning trên dữ liệu dạng bảng (tabular):
 
-5.1.1. Logistic Regression
-- Lý do chọn: Mô hình tuyến tính đơn giản, dễ giải thích, thường được sử 
-  dụng làm baseline trong các bài toán phân loại nhị phân. Logistic 
-  Regression cung cấp xác suất đầu ra, phù hợp với yêu cầu dự đoán Probability 
-  of Default.
-- Ưu điểm: Dễ hiểu, nhanh, ít tham số cần tinh chỉnh, có thể giải thích được 
-  tác động của từng biến
-- Nhược điểm: Giả định mối quan hệ tuyến tính, có thể không nắm bắt được 
-  các mối quan hệ phi tuyến phức tạp
+5.2.1. MLP + Softmax (đa lớp)
+- Kiến trúc: Embedding cho biến phân loại, chuẩn hóa số (StandardScaler), 
+  Residual MLP, đầu ra 5 logits + softmax.
+- Loss: CrossEntropy với trọng số lớp (nghịch tần suất) cho 5 hạng tín dụng proxy.
+- Huấn luyện: tách holdout nội bộ (stratify theo nhãn 5 lớp) để early stopping.
 
-5.1.2. XGBoost (Extreme Gradient Boosting)
-- Lý do chọn: Mô hình ensemble mạnh mẽ, đã đạt được nhiều thành công trong 
-  các cuộc thi Kaggle, đặc biệt là với dữ liệu có cấu trúc. XGBoost có khả 
-  năng xử lý tốt dữ liệu mất cân bằng và tự động nắm bắt các mối quan hệ 
-  phi tuyến.
-- Ưu điểm: Hiệu năng cao, xử lý tốt dữ liệu mất cân bằng, có thể xử lý giá 
-  trị thiếu, cung cấp feature importance
-- Nhược điểm: Phức tạp hơn, cần tinh chỉnh nhiều siêu tham số, khó giải thích
+5.2.2. MLP + CORAL (ordinal)
+- Cùng backbone; đầu ra K-1 logits cho xác suất tích lũy P(y>j); loss BCE trên từng ngưỡng.
+- Phù hợp khi muốn phạt sai “xa” trên thang thứ tự hơn so với softmax thuần.
 
-5.1.3. LightGBM (Light Gradient Boosting Machine)
-- Lý do chọn: Mô hình gradient boosting được tối ưu hóa về tốc độ và bộ nhớ, 
-  phù hợp với dữ liệu lớn. LightGBM thường cho kết quả tương đương hoặc tốt 
-  hơn XGBoost với thời gian huấn luyện ngắn hơn.
-- Ưu điểm: Nhanh, hiệu quả về bộ nhớ, xử lý tốt dữ liệu mất cân bằng, hỗ trợ 
-  categorical features trực tiếp
-- Nhược điểm: Có thể dễ overfitting nếu không tinh chỉnh đúng cách
+5.2.3. Sinh nhãn 5 hạng
+- Logistic Regression (sklearn) chỉ dùng trong bước gán nhãn proxy từ TARGET nhị phân, không phải mô hình dự báo chính.
+- Preprocessor + labeler + scaler được lưu trong artifacts.joblib; validate/test tái sử dụng.
 
-5.2. Chiến lược kiểm thử
-5.2.1. Stratified K-Fold Cross-Validation
-Để đối phó với dữ liệu mất cân bằng và đảm bảo đánh giá mô hình một cách 
-công bằng, nghiên cứu sử dụng Stratified K-Fold Cross-Validation:
-- K = 5: Chia dữ liệu thành 5 fold
-- Stratified: Đảm bảo tỷ lệ TARGET = 1 trong mỗi fold giữ nguyên như tỷ 
-  lệ trong toàn bộ dữ liệu (~8%)
-- Mỗi fold được sử dụng một lần làm tập kiểm thử, 4 fold còn lại làm tập 
-  huấn luyện
-- Kết quả cuối cùng là trung bình của 5 lần đánh giá
+5.2.4. Chiến lược kiểm thử (cập nhật)
+- Train: subset_train_data.csv — học tham số và validation nội bộ.
+- Validate: simplified_validate_data.csv — đánh giá sau khi train (script validate.py).
+- Test: subset_test_data.csv — suy luận (có thể không có TARGET); script test.py.
 
-5.2.2. Tách dữ liệu
-- Tập huấn luyện: 80% dữ liệu ban đầu
-- Tập kiểm thử: 20% dữ liệu ban đầu (giữ nguyên để đánh giá cuối cùng)
-- Tập validation: Được tạo từ tập huấn luyện thông qua cross-validation
-
-5.3. Kỹ thuật tối ưu
-5.3.1. Tinh chỉnh siêu tham số (Hyperparameter Tuning)
-Mỗi mô hình có các siêu tham số quan trọng cần được tinh chỉnh:
-
-- Logistic Regression:
-  * C: Tham số điều chỉnh độ mạnh của regularization
-  * class_weight: Điều chỉnh trọng số cho các lớp mất cân bằng
-  * solver: Thuật toán tối ưu (lbfgs, liblinear, saga)
-
-- XGBoost:
-  * n_estimators: Số lượng cây
-  * max_depth: Độ sâu tối đa của cây
-  * learning_rate: Tốc độ học
-  * subsample: Tỷ lệ mẫu con
-  * colsample_bytree: Tỷ lệ đặc trưng
-  * scale_pos_weight: Trọng số cho lớp thiểu số
-
-- LightGBM:
-  * n_estimators: Số lượng cây
-  * max_depth: Độ sâu tối đa
-  * learning_rate: Tốc độ học
-  * num_leaves: Số lá tối đa
-  * class_weight: Trọng số lớp
-
-Phương pháp tinh chỉnh: Grid Search hoặc Random Search kết hợp với 
-cross-validation để tìm bộ siêu tham số tối ưu.
-
-5.3.2. Xử lý mất cân bằng lớp (Class Imbalance Handling)
-Hai kỹ thuật chính được áp dụng:
-
-a) Class Weight:
-- Điều chỉnh trọng số trong hàm loss để mô hình chú ý nhiều hơn đến lớp 
-  thiểu số (TARGET = 1)
-- Công thức: class_weight = {0: 1, 1: n_samples_0 / n_samples_1}
-- Áp dụng cho: Logistic Regression, XGBoost, LightGBM
-
-b) SMOTE (Synthetic Minority Oversampling Technique):
-- Tạo dữ liệu giả lập cho lớp thiểu số bằng cách nội suy giữa các mẫu gần nhau
-- Tăng số lượng mẫu lớp thiểu số để cân bằng với lớp đa số
-- Áp dụng trước khi huấn luyện mô hình
+5.3. Kỹ thuật tối ưu (deep learning)
+- AdamW, learning rate schedule (ReduceLROnPlateau), gradient clipping, dropout, early stopping.
+- Class weight trong loss (Softmax) cho mất cân bằng giữa các hạng.
 
 5.4. Chỉ số đánh giá
 Do tính chất mất cân bằng của dữ liệu, các chỉ số sau được sử dụng để đánh giá mô hình:
@@ -381,37 +322,27 @@ Thay vì sử dụng ngưỡng mặc định 0.5, dự án thực hiện duyệt
 6. EVALUATION & DISCUSSION (ĐÁNH GIÁ & THẢO LUẬN)
 ================================================================================
 
-6.1. So sánh hiệu năng thực tế
-Dựa trên kết quả thử nghiệm có giám sát (Supervised Test - 10,000 dòng mới):
+6.1. So sánh hiệu năng (hướng cập nhật)
+- Với bài toán xếp hạng 5 lớp, các chỉ số chính gồm Quadratic Weighted Kappa (QWK), Macro/Weighted F1, ma trận nhầm lẫn.
+- Có thể báo cáo thêm AUC/MCC/G-mean khi ánh xạ về nhị phân hoặc dùng mô hình nhị phân song song.
+- Kết quả số cụ thể cập nhật theo từng lần huấn luyện (train_meta.json, validation_metrics.json trong thư mục output).
 
-| Mô hình             | Accuracy | AUC   | MCC   | G-mean |
-| :------------------ | :------- | :---- | :---- | :----- |
-| Logistic Regression | 0.635    | 0.695 | 0.160 | 0.644  |
-| XGBoost             | 0.877    | 0.731 | 0.207 | 0.520  |
-| LightGBM            | 0.852    | 0.738 | 0.210 | 0.570  |
+6.2. Đặc trưng quan trọng (IV/WoE)
+- Phân tích IV xếp hạng Top 20; các biến EXT_SOURCE và DEMO/Tài chính thường đứng đầu (tham chiếu filter_output/iv_values_all.csv).
 
-6.2. Phân tích AUC Score
-- LightGBM đạt hiệu năng cao nhất (AUC = 0.738), nhỉnh hơn XGBoost (0.731).
-- Cả hai mô hình Boosting đều vượt xa Baseline là Logistic Regression (0.695).
-- Sự sụt giảm AUC từ tập huấn luyện xuống tập kiểm thử cho thấy có hiện tượng overfitting nhẹ, đặc biệt là ở XGBoost và LightGBM.
+6.3. G-Mean & MCC (bối cảnh nhị phân)
+- Khi đánh giá khả năng phân tách Tốt/Xấu, MCC và G-mean vẫn là chỉ số tham chiếu cho dữ liệu mất cân bằng.
 
-6.3. G-Mean & MCC
-- Chỉ số MCC của cả 3 mô hình đều dương, khẳng định mô hình có khả năng dự báo tốt hơn ngẫu nhiên.
-- LightGBM cho thấy sự cân bằng tốt nhất giữa khả năng bắt nợ và giữ khách (G-mean = 0.570).
-
-6.4. Feature Importance (Độ quan trọng của đặc trưng)
-Từ biểu đồ Feature Importance của XGBoost, 3 biến có tác động mạnh nhất là:
-1. EXT_SOURCE_3: Nguồn dữ liệu uy tín nhất từ bên thứ ba.
-2. EXT_SOURCE_2: Nguồn dữ liệu quan trọng thứ hai.
-3. DAYS_BIRTH: Tuổi của khách hàng (Khách hàng trẻ thường rủi ro hơn).
+6.4. Triển khai & tái lập thí nghiệm
+- Môi trường Docker (Linux) khuyến nghị để tái lập kết quả; README.md mô tả pipeline đầy đủ.
 
 7. CONCLUSION & RECOMMENDATIONS (KẾT LUẬN & KIẾN NGHỊ)
 ================================================================================
 
 7.1. Kết luận
-- Dự án đã xây dựng thành công 3 mô hình dự đoán rủi ro tín dụng với hiệu năng đạt mức Khá (AUC ~ 0.74).
-- Phương pháp IV/WoE giúp giảm thiểu số lượng biến từ 120 xuống 20 mà vẫn giữ được độ chính xác cần thiết.
-- LightGBM được đề xuất là mô hình triển khai chính nhờ tốc độ và hiệu năng vượt trội.
+- Dự án kết hợp IV/WoE (Top 20) với mô hình deep learning (MLP + Softmax và/hoặc CORAL) cho xếp hạng tín dụng đa mức.
+- Phương pháp IV/WoE giúp giảm thiểu số lượng biến từ 120+ xuống 20 trong khi vẫn tập trung vào đặc trưng dự báo mạnh.
+- Pipeline train / validate / test tách bạch giúp đánh giá và suy luận có kiểm soát.
 
 7.2. Kiến nghị kinh doanh
 - Sử dụng ngưỡng (Threshold) tối ưu hóa theo MCC để phê duyệt khoản vay tự động.
@@ -419,8 +350,9 @@ Từ biểu đồ Feature Importance của XGBoost, 3 biến có tác động m�
 - Cần có quy trình thẩm định riêng cho nhóm khách hàng trẻ tuổi do tỷ lệ rủi ro cao hơn.
 
 7.3. Hướng phát triển
-- Thử nghiệm các kỹ thuật lấy mẫu (Over/Under-sampling) kết hợp với Hyperparameter tuning sâu hơn.
-- Tích hợp thêm dữ liệu từ các bảng phụ (Bureau, Previous Applications) để tăng AUC lên mức > 0.8.
+- Tinh chỉnh siêu tham số MLP (chiều embedding, độ sâu mạng), và thử FT-Transformer/TabNet khi mở rộng số cột.
+- Tích hợp thêm dữ liệu từ các bảng phụ (Bureau, Previous Applications) sau khi join an toàn.
+- Thử nghiệm nhãn thực tế (trễ hạn theo kỳ) nếu có dữ liệu vận hành.
 
 8. APPENDIX & REFERENCES (PHỤ LỤC & TÀI LIỆU THAM KHẢO)
 ================================================================================
@@ -430,42 +362,30 @@ Từ biểu đồ Feature Importance của XGBoost, 3 biến có tác động m�
 - Kaggle Competition: Home Credit Default Risk
   https://www.kaggle.com/c/home-credit-default-risk
 
-8.2. Danh mục các thư viện Python đã sử dụng
-- pandas: Xử lý và phân tích dữ liệu
-- numpy: Tính toán số học và đại số tuyến tính
-- matplotlib: Vẽ biểu đồ cơ bản
-- seaborn: Vẽ biểu đồ thống kê nâng cao
-- scikit-learn: Machine learning (Logistic Regression, metrics, 
-  cross-validation, SMOTE)
-- xgboost: Mô hình XGBoost
-- lightgbm: Mô hình LightGBM
-- imbalanced-learn: Xử lý dữ liệu mất cân bằng (SMOTE)
+8.2. Danh mục các thư viện Python đã sử dụng (pipeline hiện tại)
+- pandas, numpy: Dữ liệu bảng và tính toán
+- scikit-learn: Tiền xử lý, LogisticRegression (sinh nhãn proxy), metrics
+- PyTorch: Mạng nơ-ron (MLP, embedding), huấn luyện
+- matplotlib, seaborn: Trực quan hóa (EDA, WoE/IV)
+- Docker: Môi trường Linux tái lập (tuỳ triển khai)
 
 8.3. Tài liệu tham khảo
 1. Home Credit Default Risk Competition. Kaggle. 
    https://www.kaggle.com/c/home-credit-default-risk
 
-2. Chen, T., & Guestrin, C. (2016). XGBoost: A Scalable Tree Boosting System. 
-   Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge 
-   Discovery and Data Mining.
-
-3. Ke, G., et al. (2017). LightGBM: A Highly Efficient Gradient Boosting 
-   Decision Tree. Advances in Neural Information Processing Systems.
-
-4. Chawla, N. V., et al. (2002). SMOTE: Synthetic Minority Over-sampling 
-   Technique. Journal of Artificial Intelligence Research.
-
-5. Siddiqi, N. (2012). Credit Risk Scorecards: Developing and Implementing 
+2. Siddiqi, N. (2012). Credit Risk Scorecards: Developing and Implementing 
    Intelligent Credit Scoring. Wiley.
 
-6. Anderson, R. (2007). The Credit Scoring Toolkit: Theory and Practice for 
+3. Anderson, R. (2007). The Credit Scoring Toolkit: Theory and Practice for 
    Retail Credit Risk Management and Decision Analytics. Oxford University Press.
 
-7. Baesens, B., et al. (2016). Analytics in a Big Data World: The Essential 
+4. Baesens, B., et al. (2016). Analytics in a Big Data World: The Essential 
    Guide to Data Science and its Applications. Wiley.
 
-8. Provost, F., & Fawcett, T. (2013). Data Science for Business: What You Need 
+5. Provost, F., & Fawcett, T. (2013). Data Science for Business: What You Need 
    to Know about Data Mining and Data-Analytic Thinking. O'Reilly Media.
+
+6. Tài liệu PyTorch: https://pytorch.org/docs/
 
 ================================================================================
                               HẾT BÁO CÁO

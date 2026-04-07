@@ -42,7 +42,7 @@ Với mô hình **CORAL**, thay `mlp_softmax` bằng `mlp_coral` và dùng các 
 - **Thử nhanh / debug:** thêm `--max-rows 500` (hoặc số nhỏ hơn) cho `train.py` / `validate.py` / `test.py` để giảm thời gian chạy.
 - Checkpoint mặc định nằm dưới `deep_credit_rating/outputs/<mlp_softmax|mlp_coral>/` (đổi bằng `--checkpoint-dir` nếu cần).
 
-Sau bước 3, bạn phải có các file như `subset_train_data.csv`, `simplified_validate_data.csv`, `subset_test_data.csv` (tùy [`sample_data.py`](sample_data.py)) trước khi chạy train DL.
+Sau bước 3, bạn phải có các file như `subset_train_data.csv`, `subset_validate_data.csv`, `subset_test_data.csv` (tùy [`sample_data.py`](sample_data.py)) trước khi chạy train DL.
 
 ---
 
@@ -50,7 +50,7 @@ Sau bước 3, bạn phải có các file như `subset_train_data.csv`, `simplif
 
 1. **IV & WoE** — `filter_data/run_woe_analysis.py` (cần `data/application_train.csv`). Kết quả: `filter_output/iv_values_all.csv`, biểu đồ IV/WoE.
 2. **Rút gọn Top 20** — `create_simplified_data.py` → `simplified_train_data.csv`, `simplified_test_data.csv`.
-3. **Lấy mẫu** — `sample_data.py` → `subset_train_data.csv` (40k train), `subset_train2_data.csv` (10k), `simplified_validate_data.csv` (10k validation, có `TARGET`), `subset_test_data.csv` (10k, có thể không có `TARGET`).
+3. **Lấy mẫu** — `sample_data.py` → `subset_train_data.csv` (40k train), `subset_train2_data.csv` (10k), `subset_validate_data.csv` (10k validation, có `TARGET`), `subset_test_data.csv` (10k, có thể không có `TARGET`).
 
 Tiền xử lý trên bộ Top 20: sửa `DAYS_EMPLOYED == 365243`, điền median (số) / `"Missing"` (phân loại), có thể thêm tỷ lệ `Credit_Income_Ratio`, `Annuity_Income_Ratio` nếu các cột có trong Top 20.
 
@@ -79,7 +79,7 @@ Từ `TARGET` nhị phân:
 **Mặc định CSV** (đổi bằng `--data` / `--checkpoint-dir`):
 
 - Train: `subset_train_data.csv`
-- Validate: `simplified_validate_data.csv`
+- Validate: `subset_validate_data.csv`
 - Test: `subset_test_data.csv`
 
 **Ví dụ (từ thư mục gốc repo):**
@@ -91,6 +91,8 @@ python deep_credit_rating/mlp_softmax/test.py --checkpoint-dir deep_credit_ratin
 ```
 
 Tương tự thay `mlp_softmax` → `mlp_coral` cho CORAL. Checkpoint gồm `model.pt`, `artifacts.joblib`, `train_meta.json`.
+
+**Đánh giá mở rộng (validate/test, và holdout trong `train_meta.json`):** ngoài QWK và F1, JSON gồm **recall/precision/F1 riêng cho lớp nguy cơ cao nhất** (index 4 ↔ rating 5), **MAE** trên thang 0–4, **balanced accuracy**, `per_class`, và file text **ma trận nhầm lẫn** (`*_confusion_matrix.txt`). Chi tiết: [`deep_credit_rating/outputs/README.txt`](deep_credit_rating/outputs/README.txt).
 
 ---
 
@@ -118,6 +120,7 @@ docker compose build
 
 - Tiền xử lý: `woe-analysis`, `create-simplified`, `sample-data`
 - DL: `train-mlp-softmax`, `validate-mlp-softmax`, `test-mlp-softmax`, và tương tự `*-mlp-coral`
+- **Train Softmax** (`make docker-train-softmax`): mặc định **ưu tiên nhãn lớp nguy cơ cao nhất** (`balanced` sampler, focal, `class_4_sample_weight` — xem [`deep_credit_rating/common/config.py`](deep_credit_rating/common/config.py)). Log đầu run in `=== Cấu hình huấn luyện ===`. Để train kiểu cũ (shuffle, không focal, không nhân mẫu lớp 4): `make docker-train-softmax-extra EXTRA_ARGS="--train-sampler shuffle --focal-gamma 0 --class-4-sample-weight 1"`.
 
 **Shell tương tác:** `docker compose run --rm app bash`
 

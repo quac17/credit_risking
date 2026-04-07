@@ -83,7 +83,7 @@ flowchart TB
 - **Validate:** load checkpoint + `artifacts` → transform cùng preprocessor/scaler; nhãn 5 lớp từ `labeler.transform(X_num_raw, y_bin)` (không fit lại labeler) → metrics (QWK, F1, confusion…).
 - **Test:** nếu không có `TARGET` thì chỉ suy luận và ghi `predictions_test.csv`; nếu có `TARGET` thì có thể tính metrics tùy logic trong `engine.py`.
 
-**Đường dẫn CSV mặc định** (`config.py`): train `subset_train_data.csv` — validate `simplified_validate_data.csv` — test `subset_test_data.csv`. Sau `sample_data.py`, tập validation thường là `subset_validate_data.csv`; khi đó chạy `validate.py --data subset_validate_data.csv` (hoặc đổi `DEFAULT_VALIDATE_DATA` trong `config.py` cho khớp).
+**Đường dẫn CSV mặc định** (`config.py`): train `subset_train_data.csv` — validate `subset_validate_data.csv` — test `subset_test_data.csv` (khớp với đầu ra của `sample_data.py`).
 
 ---
 

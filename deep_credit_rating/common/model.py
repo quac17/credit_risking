@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class ResidualBlock(nn.Module):
@@ -84,6 +85,30 @@ def coral_loss(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         y_j = (targets > j).float()
         loss = loss + nn.functional.binary_cross_entropy_with_logits(logits[:, j], y_j)
     return loss / k
+
+
+def softmax_focal_loss(
+    logits: torch.Tensor,
+    targets: torch.Tensor,
+    gamma: float,
+    weight: torch.Tensor | None = None,
+    sample_weight: torch.Tensor | None = None,
+) -> torch.Tensor:
+    """
+    Focal loss trên cross-entropy đa lớp (Lin et al.).
+    gamma=0: tương đương CE trung bình có trọng số lớp (weight).
+    gamma>0: nhấn mạnh mẫu khó (pt thấp), thường giúp lớp hiếm khi kết hợp balanced sampler.
+    sample_weight: (B,) — nhân thêm từng mẫu (vd. >1 cho mọi mẫu nhãn lớp nguy cơ cao nhất).
+    """
+    ce = F.cross_entropy(logits, targets, reduction="none", weight=weight)
+    if gamma <= 0:
+        focal = ce
+    else:
+        pt = torch.exp(-ce)
+        focal = (1.0 - pt) ** gamma * ce
+    if sample_weight is not None:
+        return (focal * sample_weight).mean()
+    return focal.mean()
 
 
 @torch.no_grad()

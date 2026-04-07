@@ -276,7 +276,7 @@ các tập dữ liệu con (subsets) từ bộ dữ liệu gốc:
   dùng để đánh giá khả năng tổng quát hóa (generalization) vì vẫn có nhãn TARGET thực tế.
 - Tập dự đoán thực tế (subset_test_data.csv): Gồm 10,000 dòng từ bộ Test gốc, dùng để 
   mô phỏng quy trình dự đoán cho khách hàng mới (có thể không có nhãn TARGET).
-- Tập validation tách riêng (simplified_validate_data.csv): 10,000 dòng tiếp theo sau 
+- Tập validation tách riêng (subset_validate_data.csv): 10,000 dòng tiếp theo sau 
   subset_train và subset_train2, có TARGET, dùng đánh giá mô hình deep learning sau khi huấn luyện.
 
 Tất cả các tập dữ liệu trên đều tập trung vào Top 20 đặc trưng quan trọng nhất đã 
@@ -301,7 +301,7 @@ Nghiên cứu hiện tại triển khai hai kiến trúc deep learning trên d�
 
 5.2.4. Chiến lược kiểm thử (cập nhật)
 - Train: subset_train_data.csv — học tham số và validation nội bộ.
-- Validate: simplified_validate_data.csv — đánh giá sau khi train (script validate.py).
+- Validate: subset_validate_data.csv — đánh giá sau khi train (script validate.py).
 - Test: subset_test_data.csv — suy luận (có thể không có TARGET); script test.py.
 
 5.3. Kỹ thuật tối ưu (deep learning)

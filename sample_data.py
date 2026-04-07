@@ -53,7 +53,7 @@ def create_data_subsets(
     except Exception as e:
         print(f"Error processing train2 data: {e}")
 
-    print(f"Sampling next {validate_nrows} rows from {train_path} for validation (simplified_validate_data.csv)...")
+    print(f"Sampling next {validate_nrows} rows from {train_path} for validation (subset_validate_data.csv)...")
     try:
         if os.path.exists(train_path):
             skip_after = train_nrows + train2_nrows
